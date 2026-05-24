@@ -1157,7 +1157,8 @@ function renderAnual(){
   meses.forEach(mes=>{
     const key=pptoKey(ano,mes);
     const pp=presupuesto[key]||presupuesto[mes]||{};
-    const ppto=Object.values(pp).reduce((s,v)=>s+v,0);
+    // Only sum egreso keys (exclude ING| prefix which are income budgets)
+    const ppto=Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).reduce((s,[,v])=>s+v,0);
     const ing=pm[mes].ing,real=pm[mes].egr,diff=ppto-real;
     acumBal+=(ing-real);
     resRows+=`<tr>
@@ -1169,7 +1170,7 @@ function renderAnual(){
       <td style="text-align:right;font-weight:600;color:${acumBal>=0?'var(--green)':'var(--red)'}">${acumBal>=0?'+':'-'}$${fmt(Math.abs(acumBal))}</td>
     </tr>`;
   });
-  const tPpto=meses.reduce((s,m)=>{const key=pptoKey(ano,m);const pp=presupuesto[key]||presupuesto[m]||{};return s+Object.values(pp).reduce((a,v)=>a+v,0);},0);
+  const tPpto=meses.reduce((s,m)=>{const key=pptoKey(ano,m);const pp=presupuesto[key]||presupuesto[m]||{};return s+Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).reduce((a,[,v])=>a+v,0);},0);
   const tDiff=tPpto-tE;
   resRows+=`<tr class="total-row"><td>Total</td><td style="text-align:right;color:var(--green)">$${fmt(tI)}</td><td style="text-align:right">${tPpto>0?'$'+fmt(tPpto):'—'}</td><td style="text-align:right">$${fmt(tE)}</td><td style="text-align:right;color:${tDiff>=0?'var(--green)':'var(--red)'}">${tPpto>0?(tDiff>=0?'+':'-')+'$'+fmt(Math.abs(tDiff)):'—'}</td><td style="text-align:right;color:${tI>=tE?'var(--green)':'var(--red)'}">${tI>=tE?'+':'-'}$${fmt(Math.abs(tI-tE))}</td></tr>`;
   document.getElementById('resumenAnualBody').innerHTML=resRows;
