@@ -179,7 +179,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     <div class="form-row form-group" style="align-items:flex-end">
       <div style="flex:2">
         <label class="form-label">Saldo actual ($)</label>
-        <input type="text" id="saldoCC" placeholder="0" class="fmt-input" inputmode="numeric" oninput="fmtInput(this);calcSaldoCC()">
+        <input type="text" id="saldoCC" placeholder="0" class="fmt-input" inputmode="numeric" oninput="fmtInput(this);calcSaldoCC();saldoCC=getRaw('saldoCC');save();">
       </div>
       <div style="flex:1;padding-bottom:2px">
         <button class="btn-secondary" onclick="guardarSaldoCC()" style="width:100%;padding:10px">Guardar</button>
@@ -828,6 +828,11 @@ async function cargarDesdeGDrive(){
         await guardarEnGDrive();
       }
       setSyncStatus('ok','✓ Google Drive');refreshAll();
+      if(saldoCC>0){
+        const el=document.getElementById('saldoCC');
+        if(el){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
+        calcSaldoCC();
+      }
     }else{setSyncStatus('err','Error Drive');}
   }catch(e){
     // Si falla Drive, usar datos locales sin problema
@@ -2021,6 +2026,12 @@ async function init(){
   // 1. Cargar datos locales SIEMPRE — app funciona sin internet
   loadLocal();
   refreshAll();
+  // Restore saldoCC field after loading local data
+  if(saldoCC>0){
+    const el=document.getElementById('saldoCC');
+    if(el){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
+    calcSaldoCC();
+  }
   // 2. Intentar sincronizar con Drive si hay token guardado
   const tieneToken=await intentarReconexionSilenciosa();
   if(!tieneToken){
