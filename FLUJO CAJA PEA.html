@@ -178,7 +178,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     <div class="card-title">Saldo cuenta corriente</div>
     <div class="form-group" style="margin-bottom:10px">
       <label class="form-label">Saldo actual ($)</label>
-      <input type="text" id="saldoCC" placeholder="Ingresa tu saldo actual..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);calcSaldoCC();saldoCC=getRaw('saldoCC');save();">
+      <input type="text" id="saldoCC" placeholder="Ingresa tu saldo actual..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);saldoCC=getRaw('saldoCC');localStorage.setItem('fc_cc',String(saldoCC));calcSaldoCC();">
     </div>
     <!-- Métricas siempre visibles -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
@@ -840,7 +840,6 @@ async function cargarDesdeGDrive(){
         datos=j.datos||[];ahorros=j.ahorros||[];
         presupuesto=j.presupuesto||{};pagosTC=j.pagosTC||[];
         saldosIniciales=j.saldosIniciales||{};
-        if(j.saldoCC)saldoCC=j.saldoCC;
         saveLocal(); // actualizar local con datos de Drive
       } else {
         // Local tiene más datos — subir local a Drive
@@ -848,11 +847,10 @@ async function cargarDesdeGDrive(){
       }
       setSyncStatus('ok','✓ Google Drive');refreshAll();
       {
-        setTimeout(()=>{
-          const el=document.getElementById('saldoCC');
-          if(el&&saldoCC>0){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
-          calcSaldoCC();
-        },100);
+        // Re-apply saldoCC from localStorage (Drive doesn't store it)
+        const _cc=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
+        if(_cc>0){saldoCC=_cc;const el=document.getElementById('saldoCC');if(el){el.value=fmt(_cc);el.dataset.raw=String(_cc);}}
+        calcSaldoCC();
       }
     }else{setSyncStatus('err','Error Drive');}
   }catch(e){
@@ -867,7 +865,7 @@ async function guardarEnGDrive(){
   if(!gdToken)return;
   try{
     setSyncStatus('ok','↑ Guardando...');
-    const body=JSON.stringify({datos,ahorros,presupuesto,pagosTC,saldosIniciales,saldoCC});
+    const body=JSON.stringify({datos,ahorros,presupuesto,pagosTC,saldosIniciales});
     if(gdFileId){
       await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${gdFileId}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body});
     }else{
@@ -1988,7 +1986,8 @@ function makeDraggable(tbodyId, arr, saveFunc, renderFunc){
 
 function guardarSaldoCC(){
   saldoCC=getRaw('saldoCC');
-  save();calcSaldoCC();
+  localStorage.setItem('fc_cc',String(saldoCC));
+  calcSaldoCC();
 }
 function calcSaldoCC(){
   const scc=getRaw('saldoCC')||saldoCC;
@@ -2051,18 +2050,14 @@ async function init(){
   // 1. Cargar datos locales SIEMPRE — app funciona sin internet
   loadLocal();
   refreshAll();
-  // Restore saldoCC — always populate field and metrics
-  setTimeout(()=>{
-    // Try localStorage directly as backup
-    const rawCC=localStorage.getItem('fc_cc');
-    if(rawCC!==null&&rawCC!=='0')saldoCC=parseFloat(rawCC)||0;
-    const el=document.getElementById('saldoCC');
-    if(el&&saldoCC>0){
-      el.value=fmt(saldoCC);
-      el.dataset.raw=String(saldoCC);
-    }
-    calcSaldoCC();
-  },200);
+  // Restore saldoCC from localStorage — always, independently of Drive
+  const _ccVal=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
+  if(_ccVal>0){
+    saldoCC=_ccVal;
+    const _ccEl=document.getElementById('saldoCC');
+    if(_ccEl){_ccEl.value=fmt(_ccVal);_ccEl.dataset.raw=String(_ccVal);}
+  }
+  calcSaldoCC();
   // 2. Intentar sincronizar con Drive si hay token guardado
   const tieneToken=await intentarReconexionSilenciosa();
   if(!tieneToken){
