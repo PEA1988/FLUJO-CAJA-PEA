@@ -198,16 +198,18 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
         <div id="ccPptoVal" style="font-size:15px;font-weight:600;color:var(--red)">-$0</div>
       </div>
     </div>
-    <div id="ccDisponible" style="border-radius:6px;padding:12px;border:1px solid var(--border);background:var(--surface)">
-      <div style="font-size:10px;color:var(--text-3)">Disponible real estimado</div>
-      <div id="ccDisponibleVal" style="font-size:20px;font-weight:700;color:var(--text)">$0</div>
-      <div style="font-size:10px;color:var(--text-3);margin-top:2px">= Saldo − TC pendiente − Ppto restante</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="border-radius:6px;padding:12px;border:1px solid var(--red);background:var(--red-bg)">
+        <div style="font-size:10px;color:var(--red)">Gastos extra del mes</div>
+        <div id="ccExtrasVal" style="font-size:20px;font-weight:700;color:var(--red)">$0</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:2px">Sobre lo presupuestado</div>
+      </div>
+      <div id="ccDisponible" style="border-radius:6px;padding:12px;border:1px solid var(--border);background:var(--surface)">
+        <div style="font-size:10px;color:var(--text-3)">Disponible real estimado</div>
+        <div id="ccDisponibleVal" style="font-size:20px;font-weight:700;color:var(--text)">$0</div>
+        <div style="font-size:10px;color:var(--text-3);margin-top:2px">= Saldo − TC − Ppto restante</div>
+      </div>
     </div>
-  </div>
-  <!-- Gastos del mes actual -->
-  <div class="card" id="gastosMesCard">
-    <div class="card-title">Gastos del mes — <span id="gastosMesLabel"></span></div>
-    <div id="gastosMesContent"></div>
   </div>
   <div class="card">
     <div class="card-title">Nuevo registro</div>
@@ -916,7 +918,7 @@ function sw(sec,el){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('sec-'+sec).classList.add('active');
   el.classList.add('active');
-  if(sec==='registro'){updCat();updSub();updTipoPago();renderGastosMes();}
+  if(sec==='registro'){updCat();updSub();updTipoPago();}
   if(sec==='mes'){buildMesSelectors();renderMes();}
   if(sec==='anual'){buildAnualSelector();renderAnual();}
   if(sec==='presupuesto'){buildPptoSelectors();renderPpto();}
@@ -1091,7 +1093,7 @@ function getMeses(ano){const yr=ano||null;return[...new Set(datos.filter(d=>!yr|
 // Mejora 1: getMesDatos filtra también por año activo
 function getMesDatos(mes){return datos.filter(d=>d.mes===mes);}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-function refreshAll(){updFiltros();try{renderGastosMes();}catch(e){}}
+function refreshAll(){updFiltros();}
 // Mejora 1: clave de presupuesto incluye año
 function pptoKey(año,mes){return `${año}-${mes}`;}
 function getAnoActivo(){return new Date().getFullYear();}
@@ -1991,36 +1993,6 @@ function makeDraggable(tbodyId, arr, saveFunc, renderFunc){
 
 
 
-function renderGastosMes(){
-  const hoy=new Date();
-  const mes=MESES[hoy.getMonth()];
-  const ano=hoy.getFullYear();
-  const lbl=document.getElementById('gastosMesLabel');
-  if(lbl)lbl.textContent=mes+' '+ano;
-  const gastos=datos.filter(d=>d.tipo==='Egresos'&&d.mes===mes&&d.año===ano)
-    .sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  const total=gastos.reduce((s,d)=>s+d.monto,0);
-  const cont=document.getElementById('gastosMesContent');
-  if(!cont)return;
-  if(!gastos.length){cont.innerHTML='<p style="color:var(--text-3);font-size:13px;text-align:center;padding:12px">Sin gastos registrados este mes</p>';return;}
-  cont.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
-      <span style="font-size:12px;color:var(--text-3)">${gastos.length} registros</span>
-      <span style="font-size:14px;font-weight:700;color:var(--red)">Total: $${fmt(total)}</span>
-    </div>
-    <div style="max-height:220px;overflow-y:auto">
-      ${gastos.map(d=>{
-        const fd=parseLocalDate(d.fecha);
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-light)">
-          <div>
-            <div style="font-size:12px;font-weight:500">${d.categoria} · ${d.subcategoria}</div>
-            <div style="font-size:10px;color:var(--text-3)">${fd.getDate()}/${fd.getMonth()+1} · ${d.gastoCon||''}</div>
-          </div>
-          <div style="font-size:13px;font-weight:600;color:var(--red);white-space:nowrap">$${fmt(d.monto)}</div>
-        </div>`;
-      }).join('')}
-    </div>`;
-}
 function guardarSaldoCC(){
   saldoCC=getRaw('saldoCC');
   if(!saldoCC){alert('Ingresa un monto válido');return;}
@@ -2072,6 +2044,16 @@ function calcSaldoCC(){
     const diff=(pptoPorCat[cat]||0)-(gastoPorCat[cat]||0);
     if(diff>0)pptoRestante+=diff; // only positive differences
   });
+  // Gastos extras = sum of categories where real > ppto (overspent)
+  let gastosExtra=0;
+  Object.keys(pptoPorCat).forEach(cat=>{
+    const diff=(gastoPorCat[cat]||0)-(pptoPorCat[cat]||0);
+    if(diff>0)gastosExtra+=diff;
+  });
+  // Also include spending in categories with no budget
+  Object.keys(gastoPorCat).forEach(cat=>{
+    if(!pptoPorCat[cat])gastosExtra+=gastoPorCat[cat]||0;
+  });
   const disponible=scc-tcTotal-pptoRestante;
   // Update individual elements (always visible)
   const el=id=>document.getElementById(id);
@@ -2083,6 +2065,16 @@ function calcSaldoCC(){
   if(el('ccPptoVal')){
     el('ccPptoVal').textContent='-$'+fmt(pptoRestante);
     el('ccPptoVal').style.color=pptoRestante>0?'var(--red)':'var(--text-3)';
+  }
+  if(el('ccExtrasVal')){
+    el('ccExtrasVal').textContent='$'+fmt(gastosExtra);
+    const extraBox=el('ccExtrasVal').parentElement;
+    if(extraBox){
+      extraBox.style.background=gastosExtra>0?'var(--red-bg)':'var(--green-bg)';
+      extraBox.style.borderColor=gastosExtra>0?'var(--red)':'var(--green)';
+      el('ccExtrasVal').style.color=gastosExtra>0?'var(--red)':'var(--green)';
+      extraBox.querySelector('div:first-child').style.color=gastosExtra>0?'var(--red)':'var(--green)';
+    }
   }
   if(el('ccDisponible')){
     el('ccDisponible').style.background=disponible>=0?'var(--green-bg)':'var(--red-bg)';
