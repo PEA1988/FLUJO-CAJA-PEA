@@ -427,7 +427,15 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     </div>
     <p id="histCount" style="font-size:11px;color:var(--text-3);margin-bottom:8px"></p>
     <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
-      <table class="tbl"><thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Subcategoría</th><th style="text-align:right">Monto</th><th>Pagado con</th><th style="width:60px"></th></tr></thead>
+      <table class="tbl" id="histTable"><thead><tr>
+  <th onclick="sortHist('fecha')" style="cursor:pointer;user-select:none;white-space:nowrap" id="hth_fecha">Fecha <span id="hta_fecha">↓</span></th>
+  <th onclick="sortHist('tipo')" style="cursor:pointer;user-select:none" id="hth_tipo">Tipo <span id="hta_tipo"></span></th>
+  <th onclick="sortHist('categoria')" style="cursor:pointer;user-select:none" id="hth_categoria">Categoría <span id="hta_categoria"></span></th>
+  <th onclick="sortHist('subcategoria')" style="cursor:pointer;user-select:none" id="hth_subcategoria">Subcategoría <span id="hta_subcategoria"></span></th>
+  <th onclick="sortHist('monto')" style="cursor:pointer;user-select:none;text-align:right" id="hth_monto">Monto <span id="hta_monto"></span></th>
+  <th onclick="sortHist('gastoCon')" style="cursor:pointer;user-select:none" id="hth_gastoCon">Pagado con <span id="hta_gastoCon"></span></th>
+  <th style="width:60px"></th>
+</tr></thead>
       <tbody id="histBody"></tbody></table>
     </div></div>
   </div>
@@ -661,6 +669,7 @@ const TC_LABEL={'TC1':'Tarjeta de Crédito 1','TC2':'Tarjeta de Crédito 2'};
 
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
 let datos=[], ahorros=[], presupuesto={}, pagosTC=[], saldosIniciales={}, saldoCC=0;
+let histSort={col:'fecha',asc:false}; // default: most recent first
 let activeMes=0, activePptoMes=0, activeHTab='acum';
 let charts={};
 let pendingSuggMonto=0, pendingSuggFecha='';
@@ -1566,11 +1575,30 @@ function updFiltros(){
   const c=[...new Set(datos.map(d=>d.categoria))].filter(Boolean).sort();
   document.getElementById('fCat').innerHTML='<option value="">Todas</option>'+c.map(x=>`<option>${x}</option>`).join('');
 }
+function sortHist(col){
+  if(histSort.col===col){histSort.asc=!histSort.asc;}
+  else{histSort.col=col;histSort.asc=col!=='fecha'&&col!=='monto';} // fecha/monto default desc
+  renderHist();
+}
 function renderHist(){
   const fM=document.getElementById('fMes').value,fT=document.getElementById('fTipo').value,fC=document.getElementById('fCat').value;
   let f=datos;
   if(fM)f=f.filter(d=>d.mes===fM);if(fT)f=f.filter(d=>d.tipo===fT);if(fC)f=f.filter(d=>d.categoria===fC);
-  f=[...f].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  // Apply column sort
+  f=[...f].sort((a,b)=>{
+    const col=histSort.col;
+    let va=a[col]||'',vb=b[col]||'';
+    if(col==='monto'){va=a.monto||0;vb=b.monto||0;return histSort.asc?va-vb:vb-va;}
+    if(col==='fecha'){return histSort.asc?va.localeCompare(vb):vb.localeCompare(va);}
+    return histSort.asc?String(va).localeCompare(String(vb),undefined,{sensitivity:'base'}):String(vb).localeCompare(String(va),undefined,{sensitivity:'base'});
+  });
+  // Update header arrows
+  ['fecha','tipo','categoria','subcategoria','monto','gastoCon'].forEach(col=>{
+    const el=document.getElementById('hta_'+col);
+    if(el)el.textContent=histSort.col===col?(histSort.asc?'↑':'↓'):'';
+    const th=document.getElementById('hth_'+col);
+    if(th)th.style.color=histSort.col===col?'var(--blue)':'';
+  });
   document.getElementById('histCount').textContent=`${f.length} registros · Total: $${fmt(f.reduce((s,d)=>s+d.monto,0))}`;
   document.getElementById('histBody').innerHTML=f.map(d=>{
     const fd=parseLocalDate(d.fecha);
