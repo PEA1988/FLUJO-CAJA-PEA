@@ -176,16 +176,30 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <!-- Saldo Cuenta Corriente -->
   <div class="card" id="saldoCCCard">
     <div class="card-title">Saldo cuenta corriente</div>
-    <div class="form-row form-group" style="align-items:flex-end">
-      <div style="flex:2">
-        <label class="form-label">Saldo actual ($)</label>
-        <input type="text" id="saldoCC" placeholder="0" class="fmt-input" inputmode="numeric" oninput="fmtInput(this);calcSaldoCC();saldoCC=getRaw('saldoCC');save();">
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Saldo actual ($)</label>
+      <input type="text" id="saldoCC" placeholder="Ingresa tu saldo actual..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);calcSaldoCC();saldoCC=getRaw('saldoCC');save();">
+    </div>
+    <!-- Métricas siempre visibles -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text-3)">Saldo actual</div>
+        <div id="ccSaldoVal" style="font-size:15px;font-weight:600;color:var(--green)">$0</div>
       </div>
-      <div style="flex:1;padding-bottom:2px">
-        <button class="btn-secondary" onclick="guardarSaldoCC()" style="width:100%;padding:10px">Guardar</button>
+      <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text-3)">TC pendiente</div>
+        <div id="ccTCVal" style="font-size:15px;font-weight:600;color:var(--red)">-$0</div>
+      </div>
+      <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text-3)">Ppto restante mes</div>
+        <div id="ccPptoVal" style="font-size:15px;font-weight:600;color:var(--red)">-$0</div>
       </div>
     </div>
-    <div id="saldoCCResumen" style="margin-top:8px"></div>
+    <div id="ccDisponible" style="border-radius:6px;padding:12px;border:1px solid var(--border);background:var(--surface)">
+      <div style="font-size:10px;color:var(--text-3)">Disponible real estimado</div>
+      <div id="ccDisponibleVal" style="font-size:20px;font-weight:700;color:var(--text)">$0</div>
+      <div style="font-size:10px;color:var(--text-3);margin-top:2px">= Saldo − TC pendiente − Ppto restante</div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">Nuevo registro</div>
@@ -280,7 +294,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   </div>
   <div class="card">
     <div class="card-title">Comparación visual</div>
-    <div class="chart-wrap" style="height:250px"><canvas id="pptoChart" role="img" aria-label="Presupuesto vs real">Presupuesto</canvas></div>
+    <div class="chart-wrap" style="height:200px"><canvas id="pptoChart" role="img" aria-label="Presupuesto vs real">Presupuesto</canvas></div>
   </div>
   <div class="card">
     <div class="card-title">Presupuesto vs real — por categoría</div>
@@ -306,14 +320,16 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <div class="metrics" id="mensMetrics"></div>
   <!-- TC pendiente del mes -->
   <div id="tcResumenMes"></div>
-  <div class="card">
-    <div class="card-title">Egresos por categoría <span style="font-size:10px;color:var(--red);font-weight:400">(solo egresos)</span></div>
-    <div class="legend" id="catLegend"></div>
-    <div class="chart-wrap" style="height:190px"><canvas id="catChart" role="img" aria-label="Categorías">Categorías</canvas></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Movimientos diarios <span style="font-size:10px;font-weight:400"><span style="color:var(--blue)">■ Ingresos</span> · <span style="color:var(--red)">■ Egresos</span></span></div>
-    <div class="chart-wrap" style="height:170px"><canvas id="diaChart" role="img" aria-label="Diario">Diario</canvas></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card" style="margin:0">
+      <div class="card-title" style="font-size:12px">Egresos por categoría <span style="font-size:10px;color:var(--red);font-weight:400">(solo egr)</span></div>
+      <div class="legend" id="catLegend" style="font-size:10px"></div>
+      <div class="chart-wrap" style="height:160px"><canvas id="catChart" role="img" aria-label="Categorías">Categorías</canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title" style="font-size:12px">Movimientos diarios <span style="font-size:9px;font-weight:400"><span style="color:var(--blue)">■ Ing</span> · <span style="color:var(--red)">■ Egr</span></span></div>
+      <div class="chart-wrap" style="height:160px"><canvas id="diaChart" role="img" aria-label="Diario">Diario</canvas></div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">Detalle por categoría</div>
@@ -396,7 +412,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     </div>
     <div class="card">
       <div class="card-title">Evolución acumulada mensual</div>
-      <div class="chart-wrap" style="height:210px"><canvas id="acumChart" role="img" aria-label="Evolución acumulada">Evolución</canvas></div>
+      <div class="chart-wrap" style="height:180px"><canvas id="acumChart" role="img" aria-label="Evolución acumulada">Evolución</canvas></div>
     </div>
   </div>
   <div id="hpanel-movs" style="display:none">
@@ -550,14 +566,16 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     <div class="card-title">Saldo por instrumento</div>
     <div id="ahorroSaldos"></div>
   </div>
-  <div class="card">
-    <div class="card-title">Distribución patrimonio</div>
-    <div class="legend" id="ahorroLegend"></div>
-    <div class="chart-wrap" style="height:190px"><canvas id="ahorroDonut" role="img" aria-label="Patrimonio">Patrimonio</canvas></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Evolución acumulada</div>
-    <div class="chart-wrap" style="height:170px"><canvas id="ahorroLine" role="img" aria-label="Evolución ahorros">Evolución</canvas></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card" style="margin:0">
+      <div class="card-title" style="font-size:12px">Distribución patrimonio</div>
+      <div class="legend" id="ahorroLegend" style="font-size:10px"></div>
+      <div class="chart-wrap" style="height:160px"><canvas id="ahorroDonut" role="img" aria-label="Patrimonio">Patrimonio</canvas></div>
+    </div>
+    <div class="card" style="margin:0">
+      <div class="card-title" style="font-size:12px">Evolución acumulada</div>
+      <div class="chart-wrap" style="height:160px"><canvas id="ahorroLine" role="img" aria-label="Evolución ahorros">Evolución</canvas></div>
+    </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
     <table class="tbl"><thead><tr><th>Fecha</th><th>Tipo</th><th>Instrumento</th><th style="text-align:right">Monto</th><th>Comentario</th><th style="width:60px"></th></tr></thead>
@@ -828,9 +846,9 @@ async function cargarDesdeGDrive(){
         await guardarEnGDrive();
       }
       setSyncStatus('ok','✓ Google Drive');refreshAll();
-      if(saldoCC>0){
+      {
         const el=document.getElementById('saldoCC');
-        if(el){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
+        if(el&&saldoCC>0){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
         calcSaldoCC();
       }
     }else{setSyncStatus('err','Error Drive');}
@@ -870,6 +888,8 @@ function saveLocal(){
 function save(){
   saveLocal(); // siempre guarda local primero
   if(tokenValido())guardarEnGDrive(); // sincroniza con Drive si hay token
+  // Actualizar saldo CC con los datos más recientes
+  try{calcSaldoCC();}catch(e){}
 }
 function loadLocal(){
   try{
@@ -1203,7 +1223,7 @@ function renderAnual(){
   charts['anualChart']=new Chart(document.getElementById('anualChart'),{type:'bar',data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Ing',data:meses.map(m=>pm[m].ing),backgroundColor:'rgba(26,122,94,.8)',borderWidth:0},{label:'Egr',data:meses.map(m=>pm[m].egr),backgroundColor:'rgba(192,57,43,.7)',borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}}},scales:{x:{ticks:{autoSkip:false}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}}});
   const ct={};datosFilt.filter(x=>x.tipo==='Egresos').forEach(x=>{ct[x.categoria]=(ct[x.categoria]||0)+x.monto;});
   const cL=Object.keys(ct).sort((a,b)=>ct[b]-ct[a]);
-  document.getElementById('rankWrap').style.height=(cL.length*38+80)+'px';
+  // rankWrap height fixed in grid layout
   destroyChart('rankChart');
   if(cL.length)charts['rankChart']=new Chart(document.getElementById('rankChart'),{type:'bar',data:{labels:cL,datasets:[{data:cL.map(l=>ct[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}}},scales:{x:{ticks:{callback:v=>`$${fmt(v)}`}},y:{ticks:{font:{size:12}}}}}});
 }
@@ -1969,50 +1989,40 @@ function guardarSaldoCC(){
 }
 function calcSaldoCC(){
   const scc=getRaw('saldoCC')||saldoCC;
-  if(!scc){document.getElementById('saldoCCResumen').innerHTML='';return;}
   const hoy=new Date();
-  const hoyStr=hoy.toISOString().split('T')[0];
   const mesActual=MESES[hoy.getMonth()];
   const anoActual=hoy.getFullYear();
-  // 1. Gastos futuros registrados (Pago Futuro con fecha posterior a hoy)
-  const gastosFuturos=datos.filter(d=>d.tipo==='Egresos'&&d.tipoPago==='Pago Futuro'&&d.fecha>hoyStr)
-    .reduce((s,d)=>s+d.monto,0);
-  // 2. TC pendiente
+  // TC pendiente
   const tc1=getTCPendiente('TC1').pendiente;
   const tc2=getTCPendiente('TC2').pendiente;
   const tcTotal=tc1+tc2;
-  // 3. Presupuesto restante del mes (ppto egresos - lo ya gastado en CC este mes)
+  // Presupuesto restante del mes
   const key=pptoKey(anoActual,mesActual);
   const pp=presupuesto[key]||{};
   const pptoMes=Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).reduce((s,[,v])=>s+v,0);
-  const yaGastadoCC=datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesActual&&d.año===anoActual&&d.gastoCon==='Cuenta Corriente')
+  const yaGastado=datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesActual&&d.año===anoActual)
     .reduce((s,d)=>s+d.monto,0);
-  const pptoRestante=Math.max(0,pptoMes-yaGastadoCC);
-  const disponible=scc-gastosFuturos-tcTotal-pptoRestante;
-  document.getElementById('saldoCCResumen').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-      <div style="background:var(--surface);border-radius:6px;padding:10px">
-        <div style="font-size:10px;color:var(--text-3)">Saldo actual</div>
-        <div style="font-size:15px;font-weight:600;color:var(--green)">$${fmt(scc)}</div>
-      </div>
-      <div style="background:var(--surface);border-radius:6px;padding:10px">
-        <div style="font-size:10px;color:var(--text-3)">Gastos futuros pendientes</div>
-        <div style="font-size:15px;font-weight:600;color:${gastosFuturos>0?'var(--red)':'var(--text-3)'}">-$${fmt(gastosFuturos)}</div>
-      </div>
-      <div style="background:var(--surface);border-radius:6px;padding:10px">
-        <div style="font-size:10px;color:var(--text-3)">TC pendiente (TC1+TC2)</div>
-        <div style="font-size:15px;font-weight:600;color:${tcTotal>0?'var(--red)':'var(--text-3)'}">-$${fmt(tcTotal)}</div>
-      </div>
-      <div style="background:var(--surface);border-radius:6px;padding:10px">
-        <div style="font-size:10px;color:var(--text-3)">Ppto restante ${mesActual}</div>
-        <div style="font-size:15px;font-weight:600;color:${pptoRestante>0?'var(--red)':'var(--text-3)'}">-$${fmt(pptoRestante)}</div>
-      </div>
-    </div>
-    <div style="margin-top:8px;background:${disponible>=0?'var(--green-bg)':'var(--red-bg)'};border-radius:6px;padding:12px;border:1px solid ${disponible>=0?'var(--green)':'var(--red)'}">
-      <div style="font-size:10px;color:${disponible>=0?'var(--green)':'var(--red)'}">Disponible real estimado</div>
-      <div style="font-size:18px;font-weight:700;color:${disponible>=0?'var(--green)':'var(--red)'}">${disponible>=0?'':'-'}$${fmt(Math.abs(disponible))}</div>
-      <div style="font-size:10px;color:var(--text-3);margin-top:2px">= Saldo - Futuros - TC - Ppto restante</div>
-    </div>`;
+  const pptoRestante=Math.max(0,pptoMes-yaGastado);
+  const disponible=scc-tcTotal-pptoRestante;
+  // Update individual elements (always visible)
+  const el=id=>document.getElementById(id);
+  if(el('ccSaldoVal'))el('ccSaldoVal').textContent='$'+fmt(scc);
+  if(el('ccTCVal')){
+    el('ccTCVal').textContent='-$'+fmt(tcTotal);
+    el('ccTCVal').style.color=tcTotal>0?'var(--red)':'var(--text-3)';
+  }
+  if(el('ccPptoVal')){
+    el('ccPptoVal').textContent='-$'+fmt(pptoRestante);
+    el('ccPptoVal').style.color=pptoRestante>0?'var(--red)':'var(--text-3)';
+  }
+  if(el('ccDisponible')){
+    el('ccDisponible').style.background=disponible>=0?'var(--green-bg)':'var(--red-bg)';
+    el('ccDisponible').style.borderColor=disponible>=0?'var(--green)':'var(--red)';
+  }
+  if(el('ccDisponibleVal')){
+    el('ccDisponibleVal').textContent=(disponible>=0?'':'-')+'$'+fmt(Math.abs(disponible));
+    el('ccDisponibleVal').style.color=disponible>=0?'var(--green)':'var(--red)';
+  }
 }
 
 async function init(){
@@ -2027,9 +2037,10 @@ async function init(){
   loadLocal();
   refreshAll();
   // Restore saldoCC field after loading local data
-  if(saldoCC>0){
+  // Restore saldoCC — always call to populate visible metrics
+  {
     const el=document.getElementById('saldoCC');
-    if(el){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
+    if(el&&saldoCC>0){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
     calcSaldoCC();
   }
   // 2. Intentar sincronizar con Drive si hay token guardado
