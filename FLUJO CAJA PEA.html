@@ -173,6 +173,20 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 <div id="sec-registro" class="section active">
   <div id="ok-banner" class="banner banner-ok">✓ Registro guardado</div>
   <div id="ahorro-banner" class="banner banner-info"></div>
+  <!-- Saldo Cuenta Corriente -->
+  <div class="card" id="saldoCCCard">
+    <div class="card-title">Saldo cuenta corriente</div>
+    <div class="form-row form-group" style="align-items:flex-end">
+      <div style="flex:2">
+        <label class="form-label">Saldo actual ($)</label>
+        <input type="text" id="saldoCC" placeholder="0" class="fmt-input" inputmode="numeric" oninput="fmtInput(this);calcSaldoCC()">
+      </div>
+      <div style="flex:1;padding-bottom:2px">
+        <button class="btn-secondary" onclick="guardarSaldoCC()" style="width:100%;padding:10px">Guardar</button>
+      </div>
+    </div>
+    <div id="saldoCCResumen" style="margin-top:8px"></div>
+  </div>
   <div class="card">
     <div class="card-title">Nuevo registro</div>
     <!-- Fila 1: Tipo + Pagado con -->
@@ -213,7 +227,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     <div class="form-row form-group">
       <div>
         <label class="form-label">Categoría</label>
-        <select id="categoria" onchange="updSub()"></select>
+        <select id="categoria" onchange="updSub()"><option>Vivienda</option></select>
       </div>
       <div>
         <label class="form-label">Subcategoría</label>
@@ -265,15 +279,15 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     <button class="btn-primary" onclick="guardarPpto()" style="margin-top:12px">Guardar presupuesto</button>
   </div>
   <div class="card">
+    <div class="card-title">Comparación visual</div>
+    <div class="chart-wrap" style="height:250px"><canvas id="pptoChart" role="img" aria-label="Presupuesto vs real">Presupuesto</canvas></div>
+  </div>
+  <div class="card">
     <div class="card-title">Presupuesto vs real — por categoría</div>
     <div style="overflow-x:auto">
       <table class="tbl"><thead><tr><th>Categoría / Subcategoría</th><th style="text-align:right">Presupuesto</th><th style="text-align:right">Real</th><th style="text-align:right">Diferencia</th><th style="text-align:right">Estado</th></tr></thead>
       <tbody id="pptoBody"></tbody></table>
     </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Comparación visual</div>
-    <div class="chart-wrap" style="height:250px"><canvas id="pptoChart" role="img" aria-label="Presupuesto vs real">Presupuesto</canvas></div>
   </div>
 </div>
 
@@ -633,7 +647,7 @@ const ACOLORS=['#5a9e8a','#6b93c4','#9b84c4','#b8936a','#c47a7a','#6aaec4','#8ea
 const TC_LABEL={'TC1':'Tarjeta de Crédito 1','TC2':'Tarjeta de Crédito 2'};
 
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
-let datos=[], ahorros=[], presupuesto={}, pagosTC=[], saldosIniciales={};
+let datos=[], ahorros=[], presupuesto={}, pagosTC=[], saldosIniciales={}, saldoCC=0;
 let activeMes=0, activePptoMes=0, activeHTab='acum';
 let charts={};
 let pendingSuggMonto=0, pendingSuggFecha='';
@@ -845,7 +859,7 @@ function saveLocal(){
     localStorage.setItem('fc_a',JSON.stringify(ahorros));
     localStorage.setItem('fc_p',JSON.stringify(presupuesto));
     localStorage.setItem('fc_tc',JSON.stringify(pagosTC));
-    localStorage.setItem('fc_si',JSON.stringify(saldosIniciales));
+    localStorage.setItem('fc_si',JSON.stringify(saldosIniciales));localStorage.setItem('fc_cc',JSON.stringify(saldoCC));
   }catch(e){}
 }
 function save(){
@@ -859,6 +873,7 @@ function loadLocal(){
     const p=localStorage.getItem('fc_p');if(p)presupuesto=JSON.parse(p);
     const tc=localStorage.getItem('fc_tc');if(tc)pagosTC=JSON.parse(tc);
     const si=localStorage.getItem('fc_si');if(si)saldosIniciales=JSON.parse(si);
+    const scc=localStorage.getItem('fc_cc');if(scc)saldoCC=JSON.parse(scc);
   }catch(e){}
 }
 
@@ -868,7 +883,7 @@ function sw(sec,el){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('sec-'+sec).classList.add('active');
   el.classList.add('active');
-  if(sec==='registro'){updCat();updTipoPago();}
+  if(sec==='registro'){updCat();updSub();updTipoPago();}
   if(sec==='mes'){buildMesSelectors();renderMes();}
   if(sec==='anual'){buildAnualSelector();renderAnual();}
   if(sec==='presupuesto'){buildPptoSelectors();renderPpto();}
@@ -888,12 +903,17 @@ function selHTab(tab,el){
 
 // ─── FORM ─────────────────────────────────────────────────────────────────────
 function updCat(){
-  const t=document.getElementById('tipo').value;
+  const tipoEl=document.getElementById('tipo');
+  if(!tipoEl)return;
+  const t=tipoEl.value||'Egresos';
   const esIng=t==='Ingresos';
   document.getElementById('cellPagadoCon').style.display=esIng?'none':'block';
   document.getElementById('rowTipoPago').style.display=esIng?'none':'grid';
   document.getElementById('rowFechaSola').style.display=esIng?'block':'none';
-  document.getElementById('categoria').innerHTML=Object.keys(CATS[t]).map(c=>`<option>${c}</option>`).join('');
+  const catEl=document.getElementById('categoria');
+  if(!catEl)return;
+  const prevCat=catEl.value;
+  catEl.innerHTML=Object.keys(CATS[t]).map(cat=>`<option ${cat===prevCat?'selected':''}>${cat}</option>`).join('');
   updSub();
 }
 function updSub(){
@@ -1396,16 +1416,30 @@ function renderPptoComp(mes,ano){
   mesDatos.forEach(x=>{realAll[x.categoria]=(realAll[x.categoria]||0)+x.monto;});
   const bgReal=allCats.map(cat=>ing.cats.includes(cat)?'rgba(26,122,94,.85)':'rgba(26,95,168,.85)');
   const bgPpto=allCats.map(cat=>ing.cats.includes(cat)?'rgba(26,122,94,.25)':'rgba(26,95,168,.25)');
-  if(allCats.length)charts['pptoChart']=new Chart(document.getElementById('pptoChart'),{
-    type:'bar',
-    data:{labels:allCats,datasets:[
-      {label:'Presupuesto',data:allCats.map(c=>ppCatAll[c]||0),backgroundColor:bgPpto,borderWidth:0},
-      {label:'Real',data:allCats.map(c=>realAll[c]||0),backgroundColor:bgReal,borderWidth:0}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10}}},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}}},
-      scales:{x:{ticks:{autoSkip:false,maxRotation:35,font:{size:9}}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}}
-  });
+  if(allCats.length){
+    // Build degraded (lighter) version of each color for budget bars
+    const bgPptoLight=bgReal.map(col=>{
+      // Parse hex and lighten by mixing with white at 60%
+      const r=parseInt(col.slice(1,3),16),g=parseInt(col.slice(3,5),16),b=parseInt(col.slice(5,7),16);
+      const lr=Math.round(r+(255-r)*0.55),lg=Math.round(g+(255-g)*0.55),lb=Math.round(b+(255-b)*0.55);
+      return `rgb(${lr},${lg},${lb})`;
+    });
+    charts['pptoChart']=new Chart(document.getElementById('pptoChart'),{
+      type:'bar',
+      data:{labels:allCats,datasets:[
+        {label:'Real',data:allCats.map(cat=>realAll[cat]||0),backgroundColor:bgReal,borderWidth:0,order:1},
+        {label:'Presupuesto',data:allCats.map(cat=>ppCatAll[cat]||0),backgroundColor:bgPptoLight,borderWidth:0,order:2,
+         borderRadius:2,barPercentage:0.5,categoryPercentage:0.6}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10}}},
+          tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${fmt(ctx.raw)}`}}},
+        scales:{
+          x:{ticks:{autoSkip:false,maxRotation:35,font:{size:9}}},
+          y:{ticks:{callback:v=>`$${fmt(v)}`}}
+        }}
+    });
+  }
 }
 
 // ─── HISTÓRICO ACUMULADO ──────────────────────────────────────────────────────
@@ -1907,6 +1941,43 @@ function makeDraggable(tbodyId, arr, saveFunc, renderFunc){
 }
 
 
+
+function guardarSaldoCC(){
+  saldoCC=getRaw('saldoCC');
+  save();calcSaldoCC();
+}
+function calcSaldoCC(){
+  const scc=getRaw('saldoCC')||saldoCC;
+  if(!scc){document.getElementById('saldoCCResumen').innerHTML='';return;}
+  // Gastos futuros (Pago Futuro) no efectuados a la fecha
+  const hoy=new Date().toISOString().split('T')[0];
+  const gastosFuturos=datos.filter(d=>d.tipo==='Egresos'&&d.tipoPago==='Pago Futuro'&&d.fecha>hoy)
+    .reduce((s,d)=>s+d.monto,0);
+  // TC pendiente (suma de lo gastado en TC1 y TC2 no pagado)
+  const tc1=getTCPendiente('TC1').pendiente;
+  const tc2=getTCPendiente('TC2').pendiente;
+  const tcTotal=tc1+tc2;
+  const disponible=scc-gastosFuturos-tcTotal;
+  document.getElementById('saldoCCResumen').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <div style="background:var(--surface);border-radius:6px;padding:10px">
+        <div style="font-size:10px;color:var(--text-3)">Saldo actual</div>
+        <div style="font-size:15px;font-weight:600;color:var(--green)">$${fmt(scc)}</div>
+      </div>
+      <div style="background:var(--surface);border-radius:6px;padding:10px">
+        <div style="font-size:10px;color:var(--text-3)">Gastos futuros pendientes</div>
+        <div style="font-size:15px;font-weight:600;color:var(--red)">-$${fmt(gastosFuturos)}</div>
+      </div>
+      <div style="background:var(--surface);border-radius:6px;padding:10px">
+        <div style="font-size:10px;color:var(--text-3)">TC pendiente (TC1+TC2)</div>
+        <div style="font-size:15px;font-weight:600;color:var(--red)">-$${fmt(tcTotal)}</div>
+      </div>
+      <div style="background:${disponible>=0?'var(--green-bg)':'var(--red-bg)'};border-radius:6px;padding:10px;border:1px solid ${disponible>=0?'var(--green)':'var(--red)'}">
+        <div style="font-size:10px;color:${disponible>=0?'var(--green)':'var(--red)'}">Disponible real</div>
+        <div style="font-size:15px;font-weight:700;color:${disponible>=0?'var(--green)':'var(--red)'}">${disponible>=0?'':'-'}$${fmt(Math.abs(disponible))}</div>
+      </div>
+    </div>`;
+}
 
 async function init(){
   // Datos se cargan desde localStorage — no borrar
