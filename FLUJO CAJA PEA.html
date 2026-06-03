@@ -176,29 +176,17 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <!-- Saldo Cuenta Corriente -->
   <div class="card" id="saldoCCCard">
     <div class="card-title">Saldo cuenta corriente</div>
-    <div class="form-group" style="margin-bottom:10px">
-      <label class="form-label">Saldo actual ($)</label>
-      <input type="text" id="saldoCC" placeholder="Ingresa tu saldo actual..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);saldoCC=getRaw('saldoCC');localStorage.setItem('fc_cc',String(saldoCC));calcSaldoCC();">
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px">
+      <div style="flex:1">
+        <label class="form-label">Saldo actual ($)</label>
+        <input type="text" id="saldoCC" placeholder="Ej: 1.500.000" class="fmt-input" inputmode="numeric" oninput="fmtInput(this);">
+      </div>
+      <button class="btn-primary" onclick="guardarSaldoCC()" style="padding:10px 18px;white-space:nowrap">💾 Guardar saldo</button>
     </div>
-    <script>
-      // Restore immediately when element is parsed — no async, no waiting
-      (function(){
-        try{
-          var v=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
-          if(v>0){
-            var el=document.getElementById('saldoCC');
-            if(el){
-              el.value=v.toLocaleString('es-CL');
-              el.dataset.raw=String(v);
-            }
-          }
-        }catch(e){}
-      })();
-    </script>
-    <!-- Métricas siempre visibles -->
+    <!-- Métricas congeladas hasta nuevo guardado -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text-3)">Saldo actual</div>
+        <div style="font-size:10px;color:var(--text-3)">Saldo guardado</div>
         <div id="ccSaldoVal" style="font-size:15px;font-weight:600;color:var(--green)">$0</div>
       </div>
       <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
@@ -215,6 +203,11 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
       <div id="ccDisponibleVal" style="font-size:20px;font-weight:700;color:var(--text)">$0</div>
       <div style="font-size:10px;color:var(--text-3);margin-top:2px">= Saldo − TC pendiente − Ppto restante</div>
     </div>
+  </div>
+  <!-- Gastos del mes actual -->
+  <div class="card" id="gastosMesCard">
+    <div class="card-title">Gastos del mes — <span id="gastosMesLabel"></span></div>
+    <div id="gastosMesContent"></div>
   </div>
   <div class="card">
     <div class="card-title">Nuevo registro</div>
@@ -862,8 +855,7 @@ async function cargarDesdeGDrive(){
       }
       setSyncStatus('ok','✓ Google Drive');refreshAll();
       {
-        // Re-apply saldoCC from localStorage (Drive doesn't store it)
-        const _cc=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
+        const _cc=leerSaldoCC();
         if(_cc>0){saldoCC=_cc;const el=document.getElementById('saldoCC');if(el){el.value=fmt(_cc);el.dataset.raw=String(_cc);}}
         calcSaldoCC();
       }
@@ -924,7 +916,7 @@ function sw(sec,el){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('sec-'+sec).classList.add('active');
   el.classList.add('active');
-  if(sec==='registro'){updCat();updSub();updTipoPago();}
+  if(sec==='registro'){updCat();updSub();updTipoPago();renderGastosMes();}
   if(sec==='mes'){buildMesSelectors();renderMes();}
   if(sec==='anual'){buildAnualSelector();renderAnual();}
   if(sec==='presupuesto'){buildPptoSelectors();renderPpto();}
@@ -1099,7 +1091,7 @@ function getMeses(ano){const yr=ano||null;return[...new Set(datos.filter(d=>!yr|
 // Mejora 1: getMesDatos filtra también por año activo
 function getMesDatos(mes){return datos.filter(d=>d.mes===mes);}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-function refreshAll(){updFiltros();}
+function refreshAll(){updFiltros();try{renderGastosMes();}catch(e){}}
 // Mejora 1: clave de presupuesto incluye año
 function pptoKey(año,mes){return `${año}-${mes}`;}
 function getAnoActivo(){return new Date().getFullYear();}
@@ -1999,10 +1991,58 @@ function makeDraggable(tbodyId, arr, saveFunc, renderFunc){
 
 
 
+function renderGastosMes(){
+  const hoy=new Date();
+  const mes=MESES[hoy.getMonth()];
+  const ano=hoy.getFullYear();
+  const lbl=document.getElementById('gastosMesLabel');
+  if(lbl)lbl.textContent=mes+' '+ano;
+  const gastos=datos.filter(d=>d.tipo==='Egresos'&&d.mes===mes&&d.año===ano)
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const total=gastos.reduce((s,d)=>s+d.monto,0);
+  const cont=document.getElementById('gastosMesContent');
+  if(!cont)return;
+  if(!gastos.length){cont.innerHTML='<p style="color:var(--text-3);font-size:13px;text-align:center;padding:12px">Sin gastos registrados este mes</p>';return;}
+  cont.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;color:var(--text-3)">${gastos.length} registros</span>
+      <span style="font-size:14px;font-weight:700;color:var(--red)">Total: $${fmt(total)}</span>
+    </div>
+    <div style="max-height:220px;overflow-y:auto">
+      ${gastos.map(d=>{
+        const fd=parseLocalDate(d.fecha);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-light)">
+          <div>
+            <div style="font-size:12px;font-weight:500">${d.categoria} · ${d.subcategoria}</div>
+            <div style="font-size:10px;color:var(--text-3)">${fd.getDate()}/${fd.getMonth()+1} · ${d.gastoCon||''}</div>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--red);white-space:nowrap">$${fmt(d.monto)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
 function guardarSaldoCC(){
   saldoCC=getRaw('saldoCC');
+  if(!saldoCC){alert('Ingresa un monto válido');return;}
+  // Save to localStorage AND cookie (cookie survives more scenarios)
   localStorage.setItem('fc_cc',String(saldoCC));
+  document.cookie='fc_cc='+saldoCC+';max-age=31536000;path=/';
+  // Update display
+  const el=document.getElementById('saldoCC');
+  if(el){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
   calcSaldoCC();
+  // Visual feedback
+  const btn=document.querySelector('#saldoCCCard .btn-primary');
+  if(btn){const orig=btn.textContent;btn.textContent='✓ Guardado';btn.style.background='var(--green)';setTimeout(()=>{btn.textContent=orig;btn.style.background='';},1500);}
+}
+function leerSaldoCC(){
+  // Try localStorage first, then cookie as fallback
+  let v=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
+  if(!v){
+    const match=document.cookie.match(/fc_cc=([^;]+)/);
+    if(match)v=parseFloat(match[1])||0;
+  }
+  return v;
 }
 function calcSaldoCC(){
   const scc=getRaw('saldoCC')||saldoCC;
@@ -2065,8 +2105,12 @@ async function init(){
   // 1. Cargar datos locales SIEMPRE — app funciona sin internet
   loadLocal();
   refreshAll();
-  // saldoCC field is restored inline when DOM parses — just update global and calc
-  saldoCC=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
+  // Restore saldoCC from localStorage or cookie
+  saldoCC=leerSaldoCC();
+  if(saldoCC>0){
+    const _el=document.getElementById('saldoCC');
+    if(_el){_el.value=fmt(saldoCC);_el.dataset.raw=String(saldoCC);}
+  }
   calcSaldoCC();
   // 2. Intentar sincronizar con Drive si hay token guardado
   const tieneToken=await intentarReconexionSilenciosa();
