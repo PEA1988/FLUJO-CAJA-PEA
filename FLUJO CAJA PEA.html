@@ -180,6 +180,21 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
       <label class="form-label">Saldo actual ($)</label>
       <input type="text" id="saldoCC" placeholder="Ingresa tu saldo actual..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);saldoCC=getRaw('saldoCC');localStorage.setItem('fc_cc',String(saldoCC));calcSaldoCC();">
     </div>
+    <script>
+      // Restore immediately when element is parsed — no async, no waiting
+      (function(){
+        try{
+          var v=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
+          if(v>0){
+            var el=document.getElementById('saldoCC');
+            if(el){
+              el.value=v.toLocaleString('es-CL');
+              el.dataset.raw=String(v);
+            }
+          }
+        }catch(e){}
+      })();
+    </script>
     <!-- Métricas siempre visibles -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
@@ -2050,13 +2065,8 @@ async function init(){
   // 1. Cargar datos locales SIEMPRE — app funciona sin internet
   loadLocal();
   refreshAll();
-  // Restore saldoCC from localStorage — always, independently of Drive
-  const _ccVal=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
-  if(_ccVal>0){
-    saldoCC=_ccVal;
-    const _ccEl=document.getElementById('saldoCC');
-    if(_ccEl){_ccEl.value=fmt(_ccVal);_ccEl.dataset.raw=String(_ccVal);}
-  }
+  // saldoCC field is restored inline when DOM parses — just update global and calc
+  saldoCC=parseFloat(localStorage.getItem('fc_cc')||'0')||0;
   calcSaldoCC();
   // 2. Intentar sincronizar con Drive si hay token guardado
   const tieneToken=await intentarReconexionSilenciosa();
