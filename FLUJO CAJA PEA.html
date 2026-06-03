@@ -1996,13 +1996,25 @@ function calcSaldoCC(){
   const tc1=getTCPendiente('TC1').pendiente;
   const tc2=getTCPendiente('TC2').pendiente;
   const tcTotal=tc1+tc2;
-  // Presupuesto restante del mes
+  // Presupuesto restante del mes — suma solo categorías con saldo positivo (bajo presupuesto)
   const key=pptoKey(anoActual,mesActual);
   const pp=presupuesto[key]||{};
-  const pptoMes=Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).reduce((s,[,v])=>s+v,0);
-  const yaGastado=datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesActual&&d.año===anoActual)
-    .reduce((s,d)=>s+d.monto,0);
-  const pptoRestante=Math.max(0,pptoMes-yaGastado);
+  // Build ppto per category (egreso only)
+  const pptoPorCat={};
+  Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{
+    const cat=k.split('|')[0];
+    pptoPorCat[cat]=(pptoPorCat[cat]||0)+v;
+  });
+  // Build real spend per category this month
+  const gastoPorCat={};
+  datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesActual&&d.año===anoActual)
+    .forEach(d=>{gastoPorCat[d.categoria]=(gastoPorCat[d.categoria]||0)+d.monto;});
+  // Sum only categories where real < ppto (positive difference = money still available)
+  let pptoRestante=0;
+  Object.keys(pptoPorCat).forEach(cat=>{
+    const diff=(pptoPorCat[cat]||0)-(gastoPorCat[cat]||0);
+    if(diff>0)pptoRestante+=diff; // only positive differences
+  });
   const disponible=scc-tcTotal-pptoRestante;
   // Update individual elements (always visible)
   const el=id=>document.getElementById(id);
