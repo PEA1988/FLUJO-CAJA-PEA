@@ -471,7 +471,6 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <!-- Tabs -->
   <div class="htabs" style="margin-bottom:14px">
     <button class="htab active" onclick="selATab('movimiento',this)">Nuevo movimiento</button>
-    <button class="htab" onclick="selATab('saldoinicial',this)">Ahorro previo</button>
   </div>
 
   <!-- Panel: Movimiento unificado -->
@@ -554,15 +553,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     </div>
   </div>
 
-  <!-- Panel: Ahorro previo (saldo inicial) -->
-  <div id="apanel-saldoinicial" style="display:none">
-    <div class="card">
-      <div class="card-title">Ahorro previo por instrumento</div>
-      <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.5">Ingresa el saldo que ya tenías antes de usar la app. Este valor se suma al patrimonio pero <strong>no aparece como movimiento nuevo</strong> en el gráfico de evolución.</p>
-      <div id="saldoInicialInputs"></div>
-      <button class="btn-primary" onclick="guardarSaldosIniciales()" style="margin-top:10px">Guardar ahorro previo</button>
-    </div>
-  </div>
+
 
   <!-- Dashboard siempre visible -->
   <div class="metrics" id="ahorroMetrics"></div>
@@ -1150,8 +1141,8 @@ function renderMes(){
   const dk=Object.keys(dias).sort();
   destroyChart('diaChart');
   if(dk.length)charts['diaChart']=new Chart(document.getElementById('diaChart'),{type:'bar',data:{labels:dk.map(k=>parseLocalDate(k).getDate()),datasets:[
-    {label:'Ingresos',data:dk.map(k=>dias[k].ing),backgroundColor:'rgba(26,95,168,.75)',borderWidth:0,borderRadius:3},
-    {label:'Egresos',data:dk.map(k=>dias[k].egr),backgroundColor:'rgba(192,57,43,.75)',borderWidth:0,borderRadius:3}
+    {label:'Ingresos',data:dk.map(k=>dias[k].ing),backgroundColor:'rgba(26,122,94,.80)',borderWidth:0,borderRadius:3},
+    {label:'Egresos',data:dk.map(k=>dias[k].egr),backgroundColor:'rgba(192,57,43,.80)',borderWidth:0,borderRadius:3}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{
     legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10}}},
     tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}}
@@ -1159,7 +1150,6 @@ function renderMes(){
   const total=Object.values(cats).reduce((s,v)=>s+v,0);
   document.getElementById('catDetail').innerHTML='<table class="tbl"><thead><tr><th>Categoría</th><th style="text-align:right">Monto</th><th style="text-align:right">%</th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>';
 }
-// selMes replaced by onMesSelChange()
 
 // ─── ANUAL ────────────────────────────────────────────────────────────────────
 function buildAnualSelector(){
@@ -1321,7 +1311,6 @@ function updCatTotal(catKey,cat){
   const arrow=document.getElementById('ps_'+catKey+'_arrow');
   if(arrow)arrow.parentElement.querySelector('span:first-child+span').childNodes[0].textContent=total>0?'$'+fmt(total)+' ':' ';
 }
-// selPptoMes replaced by selector
 function guardarPpto(){
   const ano=parseInt(document.getElementById('pptoAnoSel').value)||new Date().getFullYear();
   const mes=MESES[parseInt(document.getElementById('pptoMesSel').value)||new Date().getMonth()];
@@ -1371,7 +1360,7 @@ function renderPptoComp(mes,ano){
       const p=ppCat[cat]||0,r=realCat[cat]||0;tP+=p;tR+=r;
       const pct=p>0?Math.round(r/p*100):null;
       const bar=p>0?Math.min(100,Math.round(r/p*100)):0;
-      const barC=pct===null?'#888':isIng?(pct>=100?'#1a7a5e':'#c0392b'):(pct>100?'#c0392b':pct>85?'#d4860a':'#1a7a5e');
+      const barC=pct===null?'rgba(180,180,185,.6)':isIng?(pct>=100?'#1a7a5e':'#c0392b'):(pct>100?'#c0392b':'#1a7a5e');
       const st=pct===null?'<span style="color:var(--text-3);font-size:10px">sin ppto</span>':
         isIng?(pct>=100?`<span class="status-ok">${pct}%</span>`:`<span class="status-over">${pct}%</span>`):
         (pct>100?`<span class="status-over">+${pct-100}%</span>`:pct>85?`<span class="status-warn">${pct}%</span>`:`<span class="status-ok">${pct}%</span>`);
@@ -1455,9 +1444,9 @@ function renderPptoComp(mes,ano){
   mesDatos.forEach(x=>{realAll[x.categoria]=(realAll[x.categoria]||0)+x.monto;});
   if(allCats.length){
     // Real: verde para ingresos, rojo para egresos
-    const bgReal=allCats.map(cat=>ing.cats.includes(cat)?'rgba(26,122,94,.85)':'rgba(192,57,43,.75)');
+    const bgReal=allCats.map(cat=>ing.cats.includes(cat)?'rgba(26,122,94,.80)':'rgba(192,57,43,.80)');
     // Presupuesto: color gris uniforme para todas las categorías (neutro, fácil de distinguir)
-    const bgPpto=allCats.map(()=>'rgba(150,150,160,.45)');
+    const bgPpto=allCats.map(()=>'rgba(180,180,185,.45)');
     charts['pptoChart']=new Chart(document.getElementById('pptoChart'),{
       type:'bar',
       data:{labels:allCats,datasets:[
@@ -1474,7 +1463,7 @@ function renderPptoComp(mes,ano){
             boxWidth:12,font:{size:10},
             generateLabels:chart=>[
               {text:'Real (Egr=rojo, Ing=verde)',fillStyle:'rgba(150,150,160,.6)',strokeStyle:'transparent',lineWidth:0},
-              {text:'Presupuesto',fillStyle:'rgba(150,150,160,.45)',strokeStyle:'transparent',lineWidth:0}
+              {text:'Presupuesto (gris)',fillStyle:'rgba(180,180,185,.45)',strokeStyle:'transparent',lineWidth:0}
             ]
           }},
           tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${fmt(ctx.raw)}`}}
@@ -1671,11 +1660,10 @@ function delDato(id){if(!confirm('¿Eliminar?'))return;datos=datos.filter(d=>d.i
 function selATab(tab,el){
   document.querySelectorAll('.htab').forEach(b=>b.classList.remove('active'));
   if(el)el.classList.add('active');
-  ['movimiento','traspaso','saldoinicial'].forEach(p=>{
+  ['movimiento','traspaso'].forEach(p=>{
     const panel=document.getElementById('apanel-'+p);
     if(panel)panel.style.display=p===tab?'block':'none';
   });
-  if(tab==='saldoinicial')buildSaldoInicialInputs();
 }
 function onATipoChange(){
   const t=document.getElementById('aTipo').value;
@@ -1730,28 +1718,6 @@ function guardarMovAhorro(){
 // Keep guardarAhorro as alias for compatibility
 function guardarAhorro(){guardarMovAhorro();}
 function guardarTraspaso(){guardarMovAhorro();}
-function buildSaldoInicialInputs(){
-  const INST=['Ahorro','Fondos Mutuos','Depósito a Plazo','Acciones','Dólares','Efectivo','Otro'];
-  let html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
-  INST.forEach(inst=>{
-    const key=inst.replace(/\s/g,'_');
-    const val=saldosIniciales[inst]||'';
-    html+=`<div><label class="form-label">${inst}</label><input type="number" id="si_${key}" value="${val}" placeholder="0" min="0" inputmode="numeric"></div>`;
-  });
-  html+='</div>';
-  document.getElementById('saldoInicialInputs').innerHTML=html;
-}
-function guardarSaldosIniciales(){
-  const INST=['Ahorro','Fondos Mutuos','Depósito a Plazo','Acciones','Dólares','Efectivo','Otro'];
-  INST.forEach(inst=>{
-    const key=inst.replace(/\s/g,'_');
-    const el=document.getElementById('si_'+key);
-    const v=el?parseFloat(el.value)||0:0;
-    if(v>0)saldosIniciales[inst]=v;
-    else delete saldosIniciales[inst];
-  });
-  save();renderAhorros();alert('Saldos iniciales guardados');
-}
 function renderAhorros(){
   // ── Cálculo de saldos por instrumento ─────────────────────────
   // Aportes netos = saldo inicial + depósitos + traspasos entrada - traspasos salida - retiros
@@ -1858,18 +1824,22 @@ function renderAhorros(){
     const ap=saldosAportes[inst]||0;
     const ret=saldosRetiros[inst]||0;
     const gp=saldosGP[inst]||0;
+    const si=saldosIniciales[inst]||0;
     const total_inst=saldos[inst];
     const color=ACOLORS[INSTRUMENTOS.indexOf(inst)%ACOLORS.length];
-    // Build detail lines
     let detalleHtml='';
-    if(ap>0)detalleHtml+=`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);padding:2px 0 2px 18px"><span>Aportes</span><span>$${fmt(ap)}</span></div>`;
+    if(si>0)detalleHtml+=`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);padding:2px 0 2px 18px"><span>Saldo previo</span><span>$${fmt(si)}</span></div>`;
+    if(ap-si>0)detalleHtml+=`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);padding:2px 0 2px 18px"><span>Aportes</span><span>$${fmt(ap-si)}</span></div>`;
     if(ret>0)detalleHtml+=`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--red);padding:2px 0 2px 18px"><span>Retiros / Traspasos</span><span>-$${fmt(ret)}</span></div>`;
     if(gp!==0)detalleHtml+=`<div style="display:flex;justify-content:space-between;font-size:10px;color:${gp>=0?'var(--green)':'var(--red)'};padding:2px 0 2px 18px"><span>${gp>=0?'▲ Ganancias':'▼ Pérdidas'}</span><span>${gp>=0?'+':'-'}$${fmt(Math.abs(gp))}</span></div>`;
     return `<div style="border-bottom:1px solid var(--border);padding:10px 0">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <div style="display:flex;align-items:center;gap:8px">
           <div style="width:10px;height:10px;border-radius:3px;background:${color}"></div>
-          <span style="font-size:13px;font-weight:600">${inst}</span>
+          <div>
+            <span style="font-size:13px;font-weight:600">${inst}</span>
+            <span onclick="editSaldoPrevio('${inst}')" style="font-size:10px;color:var(--blue);cursor:pointer;margin-left:8px">editar previo</span>
+          </div>
         </div>
         <div style="text-align:right">
           <div style="font-size:14px;font-weight:600">$${fmt(total_inst)}</div>
@@ -1897,6 +1867,15 @@ function renderAhorros(){
     </tr>`;
   }).join('')||'<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--text-3)">Sin movimientos</td></tr>';
   makeDraggable('ahorroHist', ahorros, save, renderAhorros);
+}
+function editSaldoPrevio(inst){
+  const cur=saldosIniciales[inst]||0;
+  const val=prompt(`Saldo previo para ${inst} ($):`,cur>0?fmt(cur):'0');
+  if(val===null)return;
+  const num=parseFloat(val.replace(/[^0-9]/g,''))||0;
+  if(num>0)saldosIniciales[inst]=num;
+  else delete saldosIniciales[inst];
+  save();renderAhorros();
 }
 function delTraspaso(id){
   if(!confirm('¿Eliminar este traspaso? Se eliminarán ambos movimientos (salida y entrada).'))return;
