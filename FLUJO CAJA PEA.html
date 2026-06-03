@@ -840,6 +840,7 @@ async function cargarDesdeGDrive(){
         datos=j.datos||[];ahorros=j.ahorros||[];
         presupuesto=j.presupuesto||{};pagosTC=j.pagosTC||[];
         saldosIniciales=j.saldosIniciales||{};
+        if(j.saldoCC)saldoCC=j.saldoCC;
         saveLocal(); // actualizar local con datos de Drive
       } else {
         // Local tiene más datos — subir local a Drive
@@ -847,9 +848,11 @@ async function cargarDesdeGDrive(){
       }
       setSyncStatus('ok','✓ Google Drive');refreshAll();
       {
-        const el=document.getElementById('saldoCC');
-        if(el&&saldoCC>0){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
-        calcSaldoCC();
+        setTimeout(()=>{
+          const el=document.getElementById('saldoCC');
+          if(el&&saldoCC>0){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
+          calcSaldoCC();
+        },100);
       }
     }else{setSyncStatus('err','Error Drive');}
   }catch(e){
@@ -864,7 +867,7 @@ async function guardarEnGDrive(){
   if(!gdToken)return;
   try{
     setSyncStatus('ok','↑ Guardando...');
-    const body=JSON.stringify({datos,ahorros,presupuesto,pagosTC,saldosIniciales});
+    const body=JSON.stringify({datos,ahorros,presupuesto,pagosTC,saldosIniciales,saldoCC});
     if(gdFileId){
       await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${gdFileId}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body});
     }else{
@@ -882,7 +885,7 @@ function saveLocal(){
     localStorage.setItem('fc_a',JSON.stringify(ahorros));
     localStorage.setItem('fc_p',JSON.stringify(presupuesto));
     localStorage.setItem('fc_tc',JSON.stringify(pagosTC));
-    localStorage.setItem('fc_si',JSON.stringify(saldosIniciales));localStorage.setItem('fc_cc',JSON.stringify(saldoCC));
+    localStorage.setItem('fc_si',JSON.stringify(saldosIniciales));localStorage.setItem('fc_cc',String(saldoCC));
   }catch(e){}
 }
 function save(){
@@ -898,7 +901,7 @@ function loadLocal(){
     const p=localStorage.getItem('fc_p');if(p)presupuesto=JSON.parse(p);
     const tc=localStorage.getItem('fc_tc');if(tc)pagosTC=JSON.parse(tc);
     const si=localStorage.getItem('fc_si');if(si)saldosIniciales=JSON.parse(si);
-    const scc=localStorage.getItem('fc_cc');if(scc)saldoCC=JSON.parse(scc);
+    const scc=localStorage.getItem('fc_cc');if(scc!==null)saldoCC=parseFloat(scc)||0;
   }catch(e){}
 }
 
@@ -2048,13 +2051,18 @@ async function init(){
   // 1. Cargar datos locales SIEMPRE — app funciona sin internet
   loadLocal();
   refreshAll();
-  // Restore saldoCC field after loading local data
-  // Restore saldoCC — always call to populate visible metrics
-  {
+  // Restore saldoCC — always populate field and metrics
+  setTimeout(()=>{
+    // Try localStorage directly as backup
+    const rawCC=localStorage.getItem('fc_cc');
+    if(rawCC!==null&&rawCC!=='0')saldoCC=parseFloat(rawCC)||0;
     const el=document.getElementById('saldoCC');
-    if(el&&saldoCC>0){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
+    if(el&&saldoCC>0){
+      el.value=fmt(saldoCC);
+      el.dataset.raw=String(saldoCC);
+    }
     calcSaldoCC();
-  }
+  },200);
   // 2. Intentar sincronizar con Drive si hay token guardado
   const tieneToken=await intentarReconexionSilenciosa();
   if(!tieneToken){
