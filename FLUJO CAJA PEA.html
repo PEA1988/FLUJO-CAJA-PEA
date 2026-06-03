@@ -176,12 +176,9 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <!-- Saldo Cuenta Corriente -->
   <div class="card" id="saldoCCCard">
     <div class="card-title">Saldo cuenta corriente</div>
-    <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px">
-      <div style="flex:1">
-        <label class="form-label">Saldo actual ($)</label>
-        <input type="text" id="saldoCC" placeholder="Ej: 1.500.000" class="fmt-input" inputmode="numeric" oninput="fmtInput(this);">
-      </div>
-      <button class="btn-primary" onclick="guardarSaldoCC()" style="padding:10px 18px;white-space:nowrap">💾 Guardar saldo</button>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <input type="text" id="saldoCC" placeholder="Saldo actual en cuenta corriente..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);" style="flex:1">
+      <button onclick="guardarSaldoCC()" id="ccGuardarBtn" style="padding:7px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-2);cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .2s">Guardar</button>
     </div>
     <!-- Métricas congeladas hasta nuevo guardado -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
@@ -2004,8 +2001,8 @@ function guardarSaldoCC(){
   if(el){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
   calcSaldoCC();
   // Visual feedback
-  const btn=document.querySelector('#saldoCCCard .btn-primary');
-  if(btn){const orig=btn.textContent;btn.textContent='✓ Guardado';btn.style.background='var(--green)';setTimeout(()=>{btn.textContent=orig;btn.style.background='';},1500);}
+  const btn=document.getElementById('ccGuardarBtn');
+  if(btn){const orig=btn.textContent;btn.textContent='✓';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';setTimeout(()=>{btn.textContent=orig;btn.style.borderColor='';btn.style.color='';},1500);}
 }
 function leerSaldoCC(){
   // Try localStorage first, then cookie as fallback
