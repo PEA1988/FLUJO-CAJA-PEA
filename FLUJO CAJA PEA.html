@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=1024, initial-scale=0.38, maximum-scale=5.0, user-scalable=yes">
 <title>Flujo de Caja Personal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -119,34 +119,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
 .btn-save{padding:5px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
 .btn-cancel{padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text-2)}
 
-@media(max-width:480px){
-  /* Saldo CC metrics: 2x2 grid on mobile */
-  #saldoCCCard [style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
-  /* Dashboard 3-col → single col on mobile */
-  #dashboardCard [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
-  /* Charts side by side → stacked on mobile */
-  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
-  /* Smaller chart heights on mobile */
-  .chart-wrap{min-height:140px}
-  /* Tables: smaller text */
-  .tbl td,.tbl th{font-size:10px;padding:5px 4px}
-  /* Card padding */
-  .card{padding:10px}
-  /* Form row: stack on mobile */
-  .form-row{grid-template-columns:1fr!important}
-  /* Ppto table: hide estado col on mobile */
-  #pptoCompTable th:last-child,#pptoCompTable td:last-child{display:none}
-  /* Annual table: hide some cols */  
-  #anualResTable th:nth-child(3),#anualResTable td:nth-child(3){display:none}
-  /* Hist table: hide comentario */
-  #histTable th:nth-child(6),#histTable td:nth-child(6){display:none}
-  /* Metrics grid */
-  .metrics{grid-template-columns:1fr 1fr!important}
-  /* Buttons full width */
-  .btn-primary{width:100%}
-  /* Bottom nav text */
-  .nav-btn{font-size:8px}
-}
+
 </style>
 </head>
 <body>
@@ -1393,7 +1366,7 @@ function renderMes(){
   const cL=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
   document.getElementById('catLegend').innerHTML=cL.map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${CCOLORS[i%CCOLORS.length]}"></div>${l}</div>`).join('');
   destroyChart('catChart');
-  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:20},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'end',clamp:true,font:{size:9,weight:'600'},color:(ctx)=>CCOLORS[ctx.dataIndex%CCOLORS.length],formatter:(val,ctx)=>{const tot=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);const p=Math.round(val/tot*100);return p>0?p+'%':''}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});
+  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:20},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'end',clamp:true,font:{size:9,weight:'600'},color:'#ffffff',textShadowBlur:3,textShadowColor:'rgba(0,0,0,0.8)',formatter:(val,ctx)=>{const tot=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);const p=Math.round(val/tot*100);return p>0?p+'%':''}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});
   const dias={};d.forEach(x=>{if(!dias[x.fecha])dias[x.fecha]={ing:0,egr:0};if(x.tipo==='Ingresos')dias[x.fecha].ing+=x.monto;else dias[x.fecha].egr+=x.monto;});
   const dk=Object.keys(dias).sort();
   destroyChart('diaChart');
@@ -1404,7 +1377,7 @@ function renderMes(){
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{
     legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10}}},
     tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}},
-    datalabels:{anchor:'end',align:'top',font:{size:8,weight:'600'},color:'#666',display:true,formatter:(v,ctx)=>{const tot=ctx.datasetIndex===0?dIT:dET;if(!v||!tot)return'';const p=Math.round(v/tot*100);return p>0?p+'%':''}}
+    datalabels:{anchor:'end',align:'top',font:{size:8,weight:'600'},color:'#fff',textShadowBlur:4,textShadowColor:'rgba(0,0,0,0.9)',display:true,formatter:(v,ctx)=>{const tot=ctx.datasetIndex===0?dIT:dET;if(!v||!tot)return'';const p=Math.round(v/tot*100);return p>0?p+'%':''}}
   },scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`$${fmt(v)}`,font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});}
   const total=Object.values(cats).reduce((s,v)=>s+v,0);
   document.getElementById('catDetail').innerHTML='<table class="tbl" id="catDetailTable"><thead><tr><th onclick="sortTable("cat",this)" data-col="cat" style="cursor:pointer;user-select:none;">Categoría <span class="sort-arrow"></span></th><th onclick="sortTable("monto",this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th onclick="sortTable("pct",this)" data-col="pct" style="cursor:pointer;user-select:none;text-align:right;">% <span class="sort-arrow"></span></th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>';
@@ -1473,12 +1446,12 @@ function renderAnual(){
   resRows+=`<tr class="total-row"><td>Total</td><td style="text-align:right;color:var(--green)">$${fmt(tI)}</td><td style="text-align:right">${tPpto>0?'$'+fmt(tPpto):'—'}</td><td style="text-align:right">$${fmt(tE)}</td><td style="text-align:right;color:${tDiff>=0?'var(--green)':'var(--red)'}">${tPpto>0?(tDiff>=0?'+':'-')+'$'+fmt(Math.abs(tDiff)):'—'}</td><td style="text-align:right;color:${tI>=tE?'var(--green)':'var(--red)'}">${tI>=tE?'+':'-'}$${fmt(Math.abs(tI-tE))}</td></tr>`;
   document.getElementById('resumenAnualBody').innerHTML=resRows;
   destroyChart('anualChart');
-  {const aIT=meses.reduce((s,m)=>s+pm[m].ing,0),aET=meses.reduce((s,m)=>s+pm[m].egr,0);charts['anualChart']=new Chart(document.getElementById('anualChart'),{type:'bar',data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Ing',data:meses.map(m=>pm[m].ing),backgroundColor:'rgba(26,122,94,.8)',borderWidth:0},{label:'Egr',data:meses.map(m=>pm[m].egr),backgroundColor:'rgba(192,57,43,.7)',borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'top',font:{size:8,weight:'600'},color:'#666',display:(ctx)=>{if(meses.length>8)return false;const vals=ctx.chart.data.datasets[ctx.datasetIndex].data;const maxV=Math.max(...vals);return ctx.dataset.data[ctx.dataIndex]>=maxV*0.08;},formatter:(v,ctx)=>{const tot=ctx.datasetIndex===0?aIT:aET;if(!v||!tot)return'';const p=Math.round(v/tot*100);return p>=3?p+'%':''}}},scales:{x:{ticks:{autoSkip:false}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});}
+  {const aIT=meses.reduce((s,m)=>s+pm[m].ing,0),aET=meses.reduce((s,m)=>s+pm[m].egr,0);charts['anualChart']=new Chart(document.getElementById('anualChart'),{type:'bar',data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Ing',data:meses.map(m=>pm[m].ing),backgroundColor:'rgba(26,122,94,.8)',borderWidth:0},{label:'Egr',data:meses.map(m=>pm[m].egr),backgroundColor:'rgba(192,57,43,.7)',borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'top',font:{size:8,weight:'600'},color:'#fff',textShadowBlur:4,textShadowColor:'rgba(0,0,0,0.9)',display:(ctx)=>{if(meses.length>8)return false;const vals=ctx.chart.data.datasets[ctx.datasetIndex].data;const maxV=Math.max(...vals);return ctx.dataset.data[ctx.dataIndex]>=maxV*0.08;},formatter:(v,ctx)=>{const tot=ctx.datasetIndex===0?aIT:aET;if(!v||!tot)return'';const p=Math.round(v/tot*100);return p>=3?p+'%':''}}},scales:{x:{ticks:{autoSkip:false}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});}
   const ct={};datosFilt.filter(x=>x.tipo==='Egresos').forEach(x=>{ct[x.categoria]=(ct[x.categoria]||0)+x.monto;});
   const cL=Object.keys(ct).sort((a,b)=>ct[b]-ct[a]);
   // rankWrap height fixed in grid layout
   destroyChart('rankChart');
-  if(cL.length){const rankTotal=cL.reduce((s,l)=>s+ct[l],0);charts['rankChart']=new Chart(document.getElementById('rankChart'),{type:'bar',data:{labels:cL,datasets:[{data:cL.map(l=>ct[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'right',font:{size:9,weight:'600'},color:'#555',display:true,formatter:(v)=>{if(!rankTotal||!v)return'';const p=Math.round(v/rankTotal*100);return p>0?p+'%':''}}},scales:{x:{ticks:{callback:v=>`$${fmt(v)}`}},y:{ticks:{font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]}  );}
+  if(cL.length){const rankTotal=cL.reduce((s,l)=>s+ct[l],0);charts['rankChart']=new Chart(document.getElementById('rankChart'),{type:'bar',data:{labels:cL,datasets:[{data:cL.map(l=>ct[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'right',font:{size:9,weight:'600'},color:'#fff',textShadowBlur:4,textShadowColor:'rgba(0,0,0,0.9)',display:true,formatter:(v)=>{if(!rankTotal||!v)return'';const p=Math.round(v/rankTotal*100);return p>0?p+'%':''}}},scales:{x:{ticks:{callback:v=>`$${fmt(v)}`}},y:{ticks:{font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]}  );}
 }
 
 // ─── PRESUPUESTO ──────────────────────────────────────────────────────────────
@@ -1725,7 +1698,7 @@ function renderPptoComp(mes,ano){
             {text:'Presupuesto (gris)',fillStyle:'rgba(180,180,185,.45)',strokeStyle:'transparent',lineWidth:0}
           ]}},
           tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${fmt(ctx.raw)}`}},
-          datalabels:{anchor:'end',align:'top',font:{size:9},color:'var(--text-2)',display:(ctx)=>ctx.datasetIndex===0&&!!ctx.dataset.data[ctx.dataIndex],formatter:(val,ctx)=>{if(ctx.datasetIndex!==0||!val)return '';const ppto=ctx.chart.data.datasets[1]?.data[ctx.dataIndex]||0;if(!ppto)return '';const p=Math.round(val/ppto*100);return p+'%';}}},
+          datalabels:{anchor:'end',align:'top',font:{size:9},color:'#fff',textShadowBlur:4,textShadowColor:'rgba(0,0,0,0.9)',display:(ctx)=>ctx.datasetIndex===0&&!!ctx.dataset.data[ctx.dataIndex],formatter:(val,ctx)=>{if(ctx.datasetIndex!==0||!val)return '';const ppto=ctx.chart.data.datasets[1]?.data[ctx.dataIndex]||0;if(!ppto)return '';const p=Math.round(val/ppto*100);return p+'%';}}},
         scales:{x:{ticks:{autoSkip:false,maxRotation:35,font:{size:9}}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}},
       plugins:window.ChartDataLabels?[ChartDataLabels]:[]
     });
