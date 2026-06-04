@@ -187,46 +187,12 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
   <div id="ok-banner" class="banner banner-ok">✓ Registro guardado</div>
   <div id="ahorro-banner" class="banner banner-info"></div>
   <div id="ppto-alert" style="display:none;background:#fff3cd;border:1px solid #d4860a;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#7a4f00"></div>
-  <!-- Dashboard resumen del mes -->
-  <div id="dashboardCard" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:13px;font-weight:600;color:var(--text)" id="dashMesLabel">—</div>
-      <div id="dashDias" style="font-size:11px;color:var(--text-3)"></div>
-    </div>
-    <!-- Balance mes -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px">
-      <div style="text-align:center">
-        <div style="font-size:10px;color:var(--text-3)">Ingresos</div>
-        <div id="dashIng" style="font-size:13px;font-weight:700;color:var(--green)">$0</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:10px;color:var(--text-3)">Egresos</div>
-        <div id="dashEgr" style="font-size:13px;font-weight:700;color:var(--red)">$0</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:10px;color:var(--text-3)">Balance</div>
-        <div id="dashBal" style="font-size:13px;font-weight:700">$0</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:10px;color:var(--text-3)">Gastos extra</div>
-        <div id="dashExtra" style="font-size:13px;font-weight:700;color:var(--red)">$0</div>
-      </div>
-    </div>
-    <!-- Progreso ppto -->
-    <div style="margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);margin-bottom:3px">
-        <span>Gasto vs presupuesto</span><span id="dashPptoPct">—</span>
-      </div>
-      <div style="background:var(--border-light);border-radius:4px;height:6px;overflow:hidden">
-        <div id="dashPptoBar" style="height:100%;border-radius:4px;transition:width .4s;background:var(--green);width:0%"></div>
-      </div>
-    </div>
-    <!-- Top categoría + ahorros -->
-    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3)">
-      <span>Mayor gasto: <strong id="dashTopCat" style="color:var(--text)">—</strong></span>
-      <span>Patrimonio: <strong id="dashPatrimonio" style="color:var(--text)">—</strong></span>
-    </div>
+  <!-- Dashboard resumen del mes (formato tarjetas, igual que Mes) -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="font-size:14px;font-weight:600;color:var(--text)" id="dashMesLabel">—</div>
+    <div id="dashDias" style="font-size:12px;color:var(--text-3)"></div>
   </div>
+  <div class="metrics" id="dashMetrics"></div>
   <!-- Saldo Cuenta Corriente -->
   <div class="card" id="saldoCCCard">
     <div class="card-title">Saldo cuenta corriente</div>
@@ -386,6 +352,11 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     </div>
   </div>
   <div class="metrics" id="mensMetrics"></div>
+  <!-- Saldo cuenta corriente (resumen, mismo que Registro) -->
+  <div class="card" id="mesSaldoCCCard" style="display:none">
+    <div class="card-title">Saldo cuenta corriente</div>
+    <div class="metrics" id="mesSaldoCCMetrics"></div>
+  </div>
   <!-- TC pendiente del mes -->
   <div id="tcResumenMes"></div>
   <div id="mesChartsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1006,48 +977,40 @@ function renderDashboard(){
   const ano=hoy.getFullYear();
   const diasMes=new Date(ano,hoy.getMonth()+1,0).getDate();
   const diasRest=diasMes-hoy.getDate();
-  // Label
   const lbl=document.getElementById('dashMesLabel');
   if(lbl)lbl.textContent=mes+' '+ano;
   const dias=document.getElementById('dashDias');
   if(dias)dias.textContent=diasRest===0?'Último día del mes':`${diasRest} días restantes`;
-  // Ingresos/Egresos del mes
   const mesD=datos.filter(d=>d.mes===mes&&d.año===ano);
   const ing=mesD.filter(d=>d.tipo==='Ingresos').reduce((s,d)=>s+d.monto,0);
   const egr=mesD.filter(d=>d.tipo==='Egresos').reduce((s,d)=>s+d.monto,0);
   const bal=ing-egr;
-  const dashIng=document.getElementById('dashIng');if(dashIng)dashIng.textContent='$'+fmt(ing);
-  const dashEgr=document.getElementById('dashEgr');if(dashEgr)dashEgr.textContent='$'+fmt(egr);
-  const dashBal=document.getElementById('dashBal');
-  if(dashBal){dashBal.textContent=(bal>=0?'+':'-')+'$'+fmt(Math.abs(bal));dashBal.style.color=bal>=0?'var(--green)':'var(--red)';}
-  // Progreso ppto
   const key=pptoKey(ano,mes);
   const pp=presupuesto[key]||{};
   const pptoTotal=Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).reduce((s,[,v])=>s+v,0);
   const pct=pptoTotal>0?Math.round(egr/pptoTotal*100):0;
-  // Gastos extra = sum of categories over budget
+  const barColor=pct>100?'var(--red)':pct>85?'var(--amber)':'var(--green)';
   const _ppC={};Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];_ppC[cat]=(_ppC[cat]||0)+v;});
   const _gtC={};mesD.filter(d=>d.tipo==='Egresos').forEach(d=>{_gtC[d.categoria]=(_gtC[d.categoria]||0)+d.monto;});
   let gastosExtra=0;Object.keys(_ppC).forEach(cat=>{const diff=(_gtC[cat]||0)-_ppC[cat];if(diff>0)gastosExtra+=diff;});
-  const pBar=document.getElementById('dashPptoBar');
-  const pPct=document.getElementById('dashPptoPct');
-  if(pBar){pBar.style.width=Math.min(100,pct)+'%';pBar.style.background=pct>100?'var(--red)':pct>85?'#d4860a':'var(--green)';}
-  if(pPct)pPct.textContent=pptoTotal>0?pct+'% del presupuesto':'Sin presupuesto';
-  // Top categoría
-  const cats={};mesD.filter(d=>d.tipo==='Egresos').forEach(d=>{cats[d.categoria]=(cats[d.categoria]||0)+d.monto;});
-  const topCat=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
-  const dashTop=document.getElementById('dashTopCat');
-  if(dashTop)dashTop.textContent=topCat?topCat[0]+' ($'+fmt(topCat[1])+')':'—';
-  const dashEx=document.getElementById('dashExtra');
-  if(dashEx){
-    dashEx.textContent=gastosExtra>0?'$'+fmt(gastosExtra):'$0';
-    dashEx.style.color=gastosExtra>0?'var(--red)':'var(--text-3)';
-  }
-  // Patrimonio ahorros
+  const topCat=Object.entries(_gtC).sort((a,b)=>b[1]-a[1])[0];
   let pat=Object.values(saldosIniciales).reduce((s,v)=>s+v,0);
   ahorros.forEach(a=>{pat+=a.monto;});
-  const dashPat=document.getElementById('dashPatrimonio');
-  if(dashPat)dashPat.textContent='$'+fmt(pat);
+  const cont=document.getElementById('dashMetrics');
+  if(!cont)return;
+  cont.innerHTML=`
+    <div class="metric m-blue"><div class="metric-label">Ingresos</div><div class="metric-value">$${fmt(ing)}</div></div>
+    <div class="metric m-red"><div class="metric-label">Egresos</div><div class="metric-value">$${fmt(egr)}</div></div>
+    <div class="metric ${bal>=0?'m-green':'m-red'}"><div class="metric-label">Balance del mes</div><div class="metric-value">${bal>=0?'+':'-'}$${fmt(Math.abs(bal))}</div></div>
+    <div class="metric ${gastosExtra>0?'m-red':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtra)}</div></div>
+    <div class="metric" style="grid-column:span 2"><div class="metric-label">Gasto vs presupuesto · ${pct}%</div>
+      <div style="background:var(--border-light);border-radius:4px;height:8px;overflow:hidden;margin-top:6px">
+        <div style="height:100%;border-radius:4px;width:${Math.min(100,pct)}%;background:${barColor};transition:width .4s"></div>
+      </div>
+      <div class="metric-sub">$${fmt(egr)} de $${fmt(pptoTotal)}</div>
+    </div>
+    <div class="metric"><div class="metric-label">Mayor gasto</div><div class="metric-value" style="font-size:16px">${topCat?topCat[0]:'—'}</div><div class="metric-sub">${topCat?'$'+fmt(topCat[1]):''}</div></div>
+    <div class="metric m-green"><div class="metric-label">Patrimonio</div><div class="metric-value" style="font-size:18px">$${fmt(pat)}</div></div>`;
 }
 function abrirFormRegistro(tipo){
   // Set tipo
@@ -1347,6 +1310,31 @@ function syncAllPeriodSelectors(){
   if(ppAno)ppAno.value=G_ANO;
   if(ppMes)ppMes.value=G_MES;
 }
+function renderMesSaldoCC(){
+  const scc=leerSaldoCC();
+  const card=document.getElementById('mesSaldoCCCard');
+  const cont=document.getElementById('mesSaldoCCMetrics');
+  if(!card||!cont)return;
+  if(!scc){card.style.display='none';return;}
+  card.style.display='block';
+  const hoy=new Date();
+  const mesA=MESES[hoy.getMonth()];
+  const anoA=hoy.getFullYear();
+  const tc1=getTCPendiente('TC1').pendiente;
+  const tc2=getTCPendiente('TC2').pendiente;
+  const tcTotal=tc1+tc2;
+  const key=pptoKey(anoA,mesA);
+  const pp=presupuesto[key]||{};
+  const ppC={};Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];ppC[cat]=(ppC[cat]||0)+v;});
+  const gtC={};datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesA&&d.año===anoA).forEach(d=>{gtC[d.categoria]=(gtC[d.categoria]||0)+d.monto;});
+  let pptoRestante=0;Object.keys(ppC).forEach(cat=>{const diff=ppC[cat]-(gtC[cat]||0);if(diff>0)pptoRestante+=diff;});
+  const disponible=scc-tcTotal-pptoRestante;
+  cont.innerHTML=`
+    <div class="metric m-green"><div class="metric-label">Saldo guardado</div><div class="metric-value" style="font-size:17px">$${fmt(scc)}</div></div>
+    <div class="metric ${tcTotal>0?'m-red':''}"><div class="metric-label">TC pendiente</div><div class="metric-value" style="font-size:17px">-$${fmt(tcTotal)}</div></div>
+    <div class="metric ${pptoRestante>0?'m-red':''}"><div class="metric-label">Ppto restante mes</div><div class="metric-value" style="font-size:17px">-$${fmt(pptoRestante)}</div></div>
+    <div class="metric ${disponible>=0?'m-green':'m-red'}"><div class="metric-label">Disponible real estimado</div><div class="metric-value" style="font-size:17px">${disponible>=0?'':'-'}$${fmt(Math.abs(disponible))}</div><div class="metric-sub">= Saldo − TC − Ppto restante</div></div>`;
+}
 function renderMes(){
   const anoSel=document.getElementById('mesAnoSel');
   const mesSel=document.getElementById('mesMesSel');
@@ -1387,6 +1375,7 @@ function renderMes(){
     </div>
     <div class="metric"><div class="metric-label">Mayor gasto</div><div class="metric-value" style="font-size:16px">${topCatM?topCatM[0]:'—'}</div><div class="metric-sub">${topCatM?'$'+fmt(topCatM[1]):''}</div></div>
     <div class="metric m-green"><div class="metric-label">Patrimonio</div><div class="metric-value" style="font-size:18px">$${fmt(patM)}</div></div>`;
+  renderMesSaldoCC();
   renderTCResumen('tcResumenMes', mes);
   const cats={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{cats[x.categoria]=(cats[x.categoria]||0)+x.monto;});
   const cL=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
