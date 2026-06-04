@@ -1364,17 +1364,36 @@ function renderMes(){
   const ppCatM={};Object.entries(ppM).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];ppCatM[cat]=(ppCatM[cat]||0)+v;});
   const gtCatM={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{gtCatM[x.categoria]=(gtCatM[x.categoria]||0)+x.monto;});
   let gastosExtraM=0;Object.keys(ppCatM).forEach(cat=>{const diff=(gtCatM[cat]||0)-ppCatM[cat];if(diff>0)gastosExtraM+=diff;});
+  // Gasto vs presupuesto del mes
+  const pptoTotalM=Object.values(ppCatM).reduce((s,v)=>s+v,0);
+  const pctPpto=pptoTotalM>0?Math.round(egr/pptoTotalM*100):0;
+  const barColor=pctPpto>100?'var(--red)':pctPpto>85?'var(--amber)':'var(--green)';
+  // Mayor gasto del mes
+  const gastosCat={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{gastosCat[x.categoria]=(gastosCat[x.categoria]||0)+x.monto;});
+  const topCatM=Object.entries(gastosCat).sort((a,b)=>b[1]-a[1])[0];
+  // Patrimonio total (mismo cálculo que registro)
+  let patM=Object.values(saldosIniciales).reduce((s,v)=>s+v,0);
+  ahorros.forEach(a=>{patM+=a.monto;});
   document.getElementById('mensMetrics').innerHTML=`
     <div class="metric m-blue"><div class="metric-label">Ingresos</div><div class="metric-value">$${fmt(ing)}</div></div>
     <div class="metric m-red"><div class="metric-label">Egresos</div><div class="metric-value">$${fmt(egr)}</div></div>
     <div class="metric ${bal>=0?'m-green':'m-red'}"><div class="metric-label">Balance del mes</div><div class="metric-value">${bal>=0?'+':'-'}$${fmt(Math.abs(bal))}</div></div>
-    <div class="metric ${gastosExtraM>0?'m-red':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtraM)}</div></div>`;
+    <div class="metric ${gastosExtraM>0?'m-red':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtraM)}</div></div>
+    <div class="metric" style="grid-column:span 2"><div class="metric-label">Gasto vs presupuesto · ${pctPpto}%</div>
+      <div style="background:var(--border-light);border-radius:4px;height:8px;overflow:hidden;margin-top:6px">
+        <div style="height:100%;border-radius:4px;width:${Math.min(100,pctPpto)}%;background:${barColor};transition:width .4s"></div>
+      </div>
+      <div class="metric-sub">$${fmt(egr)} de $${fmt(pptoTotalM)}</div>
+    </div>
+    <div class="metric"><div class="metric-label">Mayor gasto</div><div class="metric-value" style="font-size:16px">${topCatM?topCatM[0]:'—'}</div><div class="metric-sub">${topCatM?'$'+fmt(topCatM[1]):''}</div></div>
+    <div class="metric m-green"><div class="metric-label">Patrimonio</div><div class="metric-value" style="font-size:18px">$${fmt(patM)}</div></div>`;
   renderTCResumen('tcResumenMes', mes);
   const cats={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{cats[x.categoria]=(cats[x.categoria]||0)+x.monto;});
   const cL=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
-  document.getElementById('catLegend').innerHTML=cL.map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${CCOLORS[i%CCOLORS.length]}"></div>${l}</div>`).join('');
+  const catTotal=cL.reduce((s,l)=>s+cats[l],0);
+  document.getElementById('catLegend').innerHTML=cL.map((l,i)=>{const pct=catTotal>0?Math.round(cats[l]/catTotal*100):0;return `<div class="legend-item"><div class="legend-dot" style="background:${CCOLORS[i%CCOLORS.length]}"></div>${l} <strong style="color:var(--text);margin-left:3px">${pct}%</strong></div>`;}).join('');
   destroyChart('catChart');
-  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:20},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'end',clamp:true,font:{size:9,weight:'600'},color:'#ffffff',textShadowBlur:3,textShadowColor:'rgba(0,0,0,0.8)',formatter:(val,ctx)=>{const tot=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);const p=Math.round(val/tot*100);return p>0?p+'%':''}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});
+  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:20},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{display:false}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});
   const dias={};d.forEach(x=>{if(!dias[x.fecha])dias[x.fecha]={ing:0,egr:0};if(x.tipo==='Ingresos')dias[x.fecha].ing+=x.monto;else dias[x.fecha].egr+=x.monto;});
   const dk=Object.keys(dias).sort();
   destroyChart('diaChart');
