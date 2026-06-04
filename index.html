@@ -1358,10 +1358,17 @@ function renderMes(){
   const ing=d.filter(x=>x.tipo==='Ingresos').reduce((s,x)=>s+x.monto,0);
   const egr=d.filter(x=>x.tipo==='Egresos').reduce((s,x)=>s+x.monto,0);
   const bal=ing-egr;
+  // Gastos extra = categorías que superaron su presupuesto
+  const keyM=pptoKey(selYear,mes);
+  const ppM=presupuesto[keyM]||{};
+  const ppCatM={};Object.entries(ppM).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];ppCatM[cat]=(ppCatM[cat]||0)+v;});
+  const gtCatM={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{gtCatM[x.categoria]=(gtCatM[x.categoria]||0)+x.monto;});
+  let gastosExtraM=0;Object.keys(ppCatM).forEach(cat=>{const diff=(gtCatM[cat]||0)-ppCatM[cat];if(diff>0)gastosExtraM+=diff;});
   document.getElementById('mensMetrics').innerHTML=`
     <div class="metric m-blue"><div class="metric-label">Ingresos</div><div class="metric-value">$${fmt(ing)}</div></div>
     <div class="metric m-red"><div class="metric-label">Egresos</div><div class="metric-value">$${fmt(egr)}</div></div>
-    <div class="metric ${bal>=0?'m-green':'m-red'}" style="grid-column:span 2"><div class="metric-label">Balance del mes</div><div class="metric-value">${bal>=0?'+':'-'}$${fmt(Math.abs(bal))}</div></div>`;
+    <div class="metric ${bal>=0?'m-green':'m-red'}"><div class="metric-label">Balance del mes</div><div class="metric-value">${bal>=0?'+':'-'}$${fmt(Math.abs(bal))}</div></div>
+    <div class="metric ${gastosExtraM>0?'m-red':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtraM)}</div></div>`;
   renderTCResumen('tcResumenMes', mes);
   const cats={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{cats[x.categoria]=(cats[x.categoria]||0)+x.monto;});
   const cL=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
@@ -1373,8 +1380,8 @@ function renderMes(){
   destroyChart('diaChart');
   if(dk.length){const dIT=dk.reduce((s,k)=>s+dias[k].ing,0),dET=dk.reduce((s,k)=>s+dias[k].egr,0);
   charts['diaChart']=new Chart(document.getElementById('diaChart'),{type:'bar',data:{labels:dk.map(k=>parseLocalDate(k).getDate()),datasets:[
-    {label:'Ingresos',data:dk.map(k=>dias[k].ing),backgroundColor:'rgba(26,122,94,.80)',borderWidth:0,borderRadius:3},
-    {label:'Egresos',data:dk.map(k=>dias[k].egr),backgroundColor:'rgba(192,57,43,.80)',borderWidth:0,borderRadius:3}
+    {label:'Ingresos',data:dk.map(k=>dias[k].ing),backgroundColor:'rgba(26,122,94,.80)',borderWidth:2,borderColor:'#fff',borderRadius:3},
+    {label:'Egresos',data:dk.map(k=>dias[k].egr),backgroundColor:'rgba(192,57,43,.80)',borderWidth:2,borderColor:'#fff',borderRadius:3}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{
     legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10}}},
     tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}},
@@ -1609,7 +1616,7 @@ function renderPptoComp(mes,ano){
           </span>
           <div style="margin-top:4px">
             <div style="font-size:9px;color:var(--text-3);margin-bottom:1px">Real</div>
-            <div class="pbar"><div class="pfill" style="width:${Math.min(100,Math.round(r/Math.max(p,r)*100))}%;background:${realBarColor}"></div></div>
+            <div class="pbar"><div class="pfill" style="width:${p>0?Math.min(150,Math.round(r/p*100)):(r>0?100:0)}%;background:${realBarColor}"></div></div>
             ${p>0?`<div style="font-size:9px;color:var(--text-3);margin-top:3px;margin-bottom:1px">Ppto</div>
             <div class="pbar"><div class="pfill" style="width:100%;background:${pptoBarColor}"></div></div>`:''}
           </div>
@@ -1679,6 +1686,7 @@ function renderPptoComp(mes,ano){
   mesDatos.forEach(x=>{realAll[x.categoria]=(realAll[x.categoria]||0)+x.monto;});
   if(allCats.length){
     // Real: verde para ingresos, rojo para egresos
+    const ingCatsSet=new Set(ing.cats);
     const bgReal=allCats.map(cat=>ing.cats.includes(cat)?'rgba(26,122,94,.80)':'rgba(192,57,43,.80)');
     // Presupuesto: color gris uniforme para todas las categorías (neutro, fácil de distinguir)
     const bgPpto=allCats.map(()=>'rgba(180,180,185,.45)');
@@ -1703,7 +1711,14 @@ function renderPptoComp(mes,ano){
             display:(ctx)=>!!(ctx.dataset.data[ctx.dataIndex]),
             formatter:(val,ctx)=>{
               if(!val)return '';
-              const total=ctx.chart.data.datasets[ctx.datasetIndex].data.reduce((s,v)=>s+(v||0),0);
+              const labels=ctx.chart.data.labels;
+              const data=ctx.chart.data.datasets[ctx.datasetIndex].data;
+              const esIngreso=ingCatsSet.has(labels[ctx.dataIndex]);
+              // Total separado: ingresos suman entre ingresos, egresos entre egresos
+              let total=0;
+              labels.forEach((lab,i)=>{
+                if(ingCatsSet.has(lab)===esIngreso)total+=(data[i]||0);
+              });
               if(!total)return '';
               const p=Math.round(val/total*100);
               return p>0?p+'%':'';
