@@ -6,6 +6,7 @@
 <title>Flujo de Caja Personal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <style>
 :root{
   --bg:#f7f6f3;--surface:#fff;--border:#e8e6e1;--border-light:#f0ede8;
@@ -117,6 +118,35 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
 .edit-row .edit-actions{display:flex;gap:4px;padding-top:2px}
 .btn-save{padding:5px 10px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
 .btn-cancel{padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text-2)}
+
+@media(max-width:480px){
+  /* Saldo CC metrics: 2x2 grid on mobile */
+  #saldoCCCard [style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
+  /* Dashboard 3-col → single col on mobile */
+  #dashboardCard [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
+  /* Charts side by side → stacked on mobile */
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  /* Smaller chart heights on mobile */
+  .chart-wrap{min-height:140px}
+  /* Tables: smaller text */
+  .tbl td,.tbl th{font-size:10px;padding:5px 4px}
+  /* Card padding */
+  .card{padding:10px}
+  /* Form row: stack on mobile */
+  .form-row{grid-template-columns:1fr!important}
+  /* Ppto table: hide estado col on mobile */
+  #pptoCompTable th:last-child,#pptoCompTable td:last-child{display:none}
+  /* Annual table: hide some cols */  
+  #anualResTable th:nth-child(3),#anualResTable td:nth-child(3){display:none}
+  /* Hist table: hide comentario */
+  #histTable th:nth-child(6),#histTable td:nth-child(6){display:none}
+  /* Metrics grid */
+  .metrics{grid-template-columns:1fr 1fr!important}
+  /* Buttons full width */
+  .btn-primary{width:100%}
+  /* Bottom nav text */
+  .nav-btn{font-size:8px}
+}
 </style>
 </head>
 <body>
@@ -688,6 +718,8 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
 
 <script>
 
+// Register datalabels plugin if available
+if(window.ChartDataLabels)Chart.register(ChartDataLabels);
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 // Global period state — shared across all tabs
 let G_ANO=new Date().getFullYear();
@@ -1348,17 +1380,19 @@ function renderMes(){
   const cL=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
   document.getElementById('catLegend').innerHTML=cL.map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${CCOLORS[i%CCOLORS.length]}"></div>${l}</div>`).join('');
   destroyChart('catChart');
-  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}}}}});
+  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{color:'#fff',font:{size:10,weight:'bold'},formatter:(val,ctx)=>{const tot=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);const p=Math.round(val/tot*100);return p>5?p+'%':''}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});
   const dias={};d.forEach(x=>{if(!dias[x.fecha])dias[x.fecha]={ing:0,egr:0};if(x.tipo==='Ingresos')dias[x.fecha].ing+=x.monto;else dias[x.fecha].egr+=x.monto;});
   const dk=Object.keys(dias).sort();
   destroyChart('diaChart');
-  if(dk.length)charts['diaChart']=new Chart(document.getElementById('diaChart'),{type:'bar',data:{labels:dk.map(k=>parseLocalDate(k).getDate()),datasets:[
+  if(dk.length){const dIT=dk.reduce((s,k)=>s+dias[k].ing,0),dET=dk.reduce((s,k)=>s+dias[k].egr,0);
+  charts['diaChart']=new Chart(document.getElementById('diaChart'),{type:'bar',data:{labels:dk.map(k=>parseLocalDate(k).getDate()),datasets:[
     {label:'Ingresos',data:dk.map(k=>dias[k].ing),backgroundColor:'rgba(26,122,94,.80)',borderWidth:0,borderRadius:3},
     {label:'Egresos',data:dk.map(k=>dias[k].egr),backgroundColor:'rgba(192,57,43,.80)',borderWidth:0,borderRadius:3}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{
     legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10}}},
-    tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}}
-  },scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`$${fmt(v)}`,font:{size:10}}}}}});
+    tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}},
+    datalabels:{anchor:'end',align:'top',font:{size:8,weight:'600'},color:'#666',display:(ctx)=>{if(dk.length>12)return false;const vals=ctx.chart.data.datasets[ctx.datasetIndex].data;const maxV=Math.max(...vals);return ctx.dataset.data[ctx.dataIndex]>=maxV*0.10;},formatter:(v,ctx)=>{const tot=ctx.datasetIndex===0?dIT:dET;if(!v||!tot)return'';const p=Math.round(v/tot*100);return p>=5?p+'%':''}}
+  },scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`$${fmt(v)}`,font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});}
   const total=Object.values(cats).reduce((s,v)=>s+v,0);
   document.getElementById('catDetail').innerHTML='<table class="tbl" id="catDetailTable"><thead><tr><th onclick="sortTable("cat",this)" data-col="cat" style="cursor:pointer;user-select:none;">Categoría <span class="sort-arrow"></span></th><th onclick="sortTable("monto",this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th onclick="sortTable("pct",this)" data-col="pct" style="cursor:pointer;user-select:none;text-align:right;">% <span class="sort-arrow"></span></th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>';
 }
@@ -1426,12 +1460,12 @@ function renderAnual(){
   resRows+=`<tr class="total-row"><td>Total</td><td style="text-align:right;color:var(--green)">$${fmt(tI)}</td><td style="text-align:right">${tPpto>0?'$'+fmt(tPpto):'—'}</td><td style="text-align:right">$${fmt(tE)}</td><td style="text-align:right;color:${tDiff>=0?'var(--green)':'var(--red)'}">${tPpto>0?(tDiff>=0?'+':'-')+'$'+fmt(Math.abs(tDiff)):'—'}</td><td style="text-align:right;color:${tI>=tE?'var(--green)':'var(--red)'}">${tI>=tE?'+':'-'}$${fmt(Math.abs(tI-tE))}</td></tr>`;
   document.getElementById('resumenAnualBody').innerHTML=resRows;
   destroyChart('anualChart');
-  charts['anualChart']=new Chart(document.getElementById('anualChart'),{type:'bar',data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Ing',data:meses.map(m=>pm[m].ing),backgroundColor:'rgba(26,122,94,.8)',borderWidth:0},{label:'Egr',data:meses.map(m=>pm[m].egr),backgroundColor:'rgba(192,57,43,.7)',borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}}},scales:{x:{ticks:{autoSkip:false}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}}});
+  {const aIT=meses.reduce((s,m)=>s+pm[m].ing,0),aET=meses.reduce((s,m)=>s+pm[m].egr,0);charts['anualChart']=new Chart(document.getElementById('anualChart'),{type:'bar',data:{labels:meses.map(m=>m.slice(0,3)),datasets:[{label:'Ing',data:meses.map(m=>pm[m].ing),backgroundColor:'rgba(26,122,94,.8)',borderWidth:0},{label:'Egr',data:meses.map(m=>pm[m].egr),backgroundColor:'rgba(192,57,43,.7)',borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'top',font:{size:8,weight:'600'},color:'#666',display:(ctx)=>{if(meses.length>8)return false;const vals=ctx.chart.data.datasets[ctx.datasetIndex].data;const maxV=Math.max(...vals);return ctx.dataset.data[ctx.dataIndex]>=maxV*0.08;},formatter:(v,ctx)=>{const tot=ctx.datasetIndex===0?aIT:aET;if(!v||!tot)return'';const p=Math.round(v/tot*100);return p>=3?p+'%':''}}},scales:{x:{ticks:{autoSkip:false}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});}
   const ct={};datosFilt.filter(x=>x.tipo==='Egresos').forEach(x=>{ct[x.categoria]=(ct[x.categoria]||0)+x.monto;});
   const cL=Object.keys(ct).sort((a,b)=>ct[b]-ct[a]);
   // rankWrap height fixed in grid layout
   destroyChart('rankChart');
-  if(cL.length)charts['rankChart']=new Chart(document.getElementById('rankChart'),{type:'bar',data:{labels:cL,datasets:[{data:cL.map(l=>ct[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}}},scales:{x:{ticks:{callback:v=>`$${fmt(v)}`}},y:{ticks:{font:{size:12}}}}}});
+  if(cL.length){const rankTotal=cL.reduce((s,l)=>s+ct[l],0);charts['rankChart']=new Chart(document.getElementById('rankChart'),{type:'bar',data:{labels:cL,datasets:[{data:cL.map(l=>ct[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'right',font:{size:9,weight:'600'},color:'#555',display:(ctx)=>{if(cL.length>10)return false;const p=Math.round(ctx.dataset.data[ctx.dataIndex]/rankTotal*100);return p>=5;},formatter:(v)=>{if(!rankTotal)return'';const p=Math.round(v/rankTotal*100);return p+'%'}}},scales:{x:{ticks:{callback:v=>`$${fmt(v)}`}},y:{ticks:{font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]}  );}
 }
 
 // ─── PRESUPUESTO ──────────────────────────────────────────────────────────────
@@ -1572,7 +1606,9 @@ function renderPptoComp(mes,ano){
       const p=ppCat[cat]||0,r=realCat[cat]||0;tP+=p;tR+=r;
       const pct=p>0?Math.round(r/p*100):null;
       const bar=p>0?Math.min(100,Math.round(r/p*100)):0;
-      const barC=pct===null?'rgba(180,180,185,.6)':isIng?(pct>=100?'#1a7a5e':'#c0392b'):(pct>100?'#c0392b':'#1a7a5e');
+      // Real bar: green for ingresos, red for egresos (fixed colors matching the chart)
+      const realBarColor=isIng?'rgba(26,122,94,.80)':'rgba(192,57,43,.80)';
+      const pptoBarColor='rgba(180,180,185,.55)'; // always grey like the chart
       const st=pct===null?'<span style="color:var(--text-3);font-size:10px">sin ppto</span>':
         isIng?(pct>=100?`<span class="status-ok">${pct}%</span>`:`<span class="status-over">${pct}%</span>`):
         (pct>100?`<span class="status-over">+${pct-100}%</span>`:pct>85?`<span class="status-warn">${pct}%</span>`:`<span class="status-ok">${pct}%</span>`);
@@ -1586,9 +1622,9 @@ function renderPptoComp(mes,ano){
           </span>
           <div style="margin-top:4px">
             <div style="font-size:9px;color:var(--text-3);margin-bottom:1px">Real</div>
-            <div class="pbar"><div class="pfill" style="width:${Math.min(100,Math.round(r/Math.max(p,r)*100))}%;background:${barC}"></div></div>
+            <div class="pbar"><div class="pfill" style="width:${Math.min(100,Math.round(r/Math.max(p,r)*100))}%;background:${realBarColor}"></div></div>
             ${p>0?`<div style="font-size:9px;color:var(--text-3);margin-top:3px;margin-bottom:1px">Ppto</div>
-            <div class="pbar" style="background:var(--border-light)"><div class="pfill" style="width:100%;background:${barC}33"></div></div>`:''}
+            <div class="pbar"><div class="pfill" style="width:100%;background:${pptoBarColor}"></div></div>`:''}
           </div>
         </td>
         <td style="text-align:right;font-size:12px">${p?'$'+fmt(p):'—'}</td>
@@ -1671,19 +1707,14 @@ function renderPptoComp(mes,ano){
       ]},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{
-          legend:{display:true,position:'top',labels:{
-            boxWidth:12,font:{size:10},
-            generateLabels:chart=>[
-              {text:'Real (Egr=rojo, Ing=verde)',fillStyle:'rgba(150,150,160,.6)',strokeStyle:'transparent',lineWidth:0},
-              {text:'Presupuesto (gris)',fillStyle:'rgba(180,180,185,.45)',strokeStyle:'transparent',lineWidth:0}
-            ]
-          }},
-          tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${fmt(ctx.raw)}`}}
-        },
-        scales:{
-          x:{ticks:{autoSkip:false,maxRotation:35,font:{size:9}}},
-          y:{ticks:{callback:v=>`$${fmt(v)}`}}
-        }}
+          legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10},generateLabels:chart=>[
+            {text:'Real (Egr=rojo, Ing=verde)',fillStyle:'rgba(150,150,160,.6)',strokeStyle:'transparent',lineWidth:0},
+            {text:'Presupuesto (gris)',fillStyle:'rgba(180,180,185,.45)',strokeStyle:'transparent',lineWidth:0}
+          ]}},
+          tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${fmt(ctx.raw)}`}},
+          datalabels:{anchor:'end',align:'top',font:{size:9},color:'var(--text-2)',display:(ctx)=>{if(allCats.length>8)return false;if(ctx.datasetIndex!==0)return false;const vals=ctx.chart.data.datasets[0].data;const maxV=Math.max(...vals);return ctx.dataset.data[ctx.dataIndex]>=maxV*0.08;},formatter:(val,ctx)=>{if(ctx.datasetIndex!==0||!val)return '';const ppto=ctx.chart.data.datasets[1]?.data[ctx.dataIndex]||0;if(!ppto)return '';const p=Math.round(val/ppto*100);return p+'%';}}},
+        scales:{x:{ticks:{autoSkip:false,maxRotation:35,font:{size:9}}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}},
+      plugins:window.ChartDataLabels?[ChartDataLabels]:[]
     });
   }
 }
@@ -2005,23 +2036,7 @@ function renderAhorros(){
     const donutLabels=[...activos];
     const donutData=activos.map(i=>saldos[i]);
     const donutColors=activos.map(i=>ACOLORS[INSTRUMENTOS.indexOf(i)%ACOLORS.length]);
-    charts['ahorroDonut']=new Chart(document.getElementById('ahorroDonut'),{
-      type:'doughnut',
-      data:{
-        labels:donutLabels,
-        datasets:[{data:donutData,backgroundColor:donutColors,borderWidth:0}]
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        plugins:{
-          legend:{display:false},
-          tooltip:{callbacks:{
-            title:ctx=>ctx[0]?donutLabels[ctx[0].dataIndex]:'',
-            label:ctx=>`$${fmt(donutData[ctx.dataIndex])}`
-          }}
-        }
-      }
-    });
+    charts['ahorroDonut']=new Chart(document.getElementById('ahorroDonut'),{type:'doughnut',data:{labels:donutLabels,datasets:[{data:donutData,backgroundColor:donutColors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>ctx[0]?donutLabels[ctx[0].dataIndex]:'',label:ctx=>`$${fmt(donutData[ctx.dataIndex])}`}},datalabels:{color:'#fff',font:{size:10,weight:'bold'},formatter:(val,ctx)=>{const tot=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);const p=Math.round(val/tot*100);return p>5?p+'%':''}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});;
   }
   // Gráfico: solo mueve la línea con depósitos, rentabilidad y retiros
   // Traspasos NO mueven la línea (no cambian patrimonio total)
