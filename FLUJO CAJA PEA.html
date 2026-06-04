@@ -93,6 +93,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 
 .sort-arrow{font-size:10px;color:var(--text-3)}
 @media(max-width:600px){
+  #mesChartsGrid{grid-template-columns:1fr!important;gap:8px}
   [style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
   [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
   .form-row{grid-template-columns:1fr!important}
@@ -386,15 +387,15 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
   <div class="metrics" id="mensMetrics"></div>
   <!-- TC pendiente del mes -->
   <div id="tcResumenMes"></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+  <div id="mesChartsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
     <div class="card" style="margin:0">
       <div class="card-title" style="font-size:12px">Egresos por categoría <span style="font-size:10px;color:var(--red);font-weight:400">(solo egr)</span></div>
       <div class="legend" id="catLegend" style="font-size:10px"></div>
       <div class="chart-wrap" style="height:160px"><canvas id="catChart" role="img" aria-label="Categorías">Categorías</canvas></div>
     </div>
-    <div class="card" style="margin:0">
+    <div class="card" style="margin:0;min-width:0;overflow:hidden">
       <div class="card-title" style="font-size:12px">Movimientos diarios <span style="font-size:9px;font-weight:400"><span style="color:var(--blue)">■ Ing</span> · <span style="color:var(--red)">■ Egr</span></span></div>
-      <div class="chart-wrap" style="height:160px"><canvas id="diaChart" role="img" aria-label="Diario">Diario</canvas></div>
+      <div class="chart-wrap" style="height:160px;position:relative;width:100%"><canvas id="diaChart" role="img" aria-label="Diario" style="max-width:100%">Diario</canvas></div>
     </div>
   </div>
   <div class="card">
