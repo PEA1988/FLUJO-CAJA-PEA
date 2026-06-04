@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Flujo de Caja Personal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#f7f6f3;--surface:#fff;--border:#e8e6e1;--border-light:#f0ede8;
@@ -98,6 +99,11 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .tc-name{font-size:12px;font-weight:600;color:var(--amber)}
 .tc-amount{font-size:15px;font-weight:600;color:var(--amber)}
 
+.tip{position:relative;display:inline-flex;align-items:center;margin-left:4px;cursor:help}
+.tip-icon{font-size:11px;color:var(--text-3);width:15px;height:15px;border-radius:50%;border:1px solid var(--text-3);display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
+.tip-box{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#333;color:#fff;font-size:11px;padding:6px 10px;border-radius:6px;white-space:nowrap;z-index:200;pointer-events:none;line-height:1.4;min-width:180px;max-width:240px;white-space:normal;text-align:center}
+.tip-box::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#333}
+.tip:hover .tip-box,.tip:focus .tip-box{display:block}
 .divider-title{font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 /* Formatted number input */
 .fmt-input{font-variant-numeric:tabular-nums}
@@ -173,6 +179,43 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 <div id="sec-registro" class="section active">
   <div id="ok-banner" class="banner banner-ok">✓ Registro guardado</div>
   <div id="ahorro-banner" class="banner banner-info"></div>
+  <div id="ppto-alert" style="display:none;background:#fff3cd;border:1px solid #d4860a;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#7a4f00"></div>
+  <!-- Dashboard resumen del mes -->
+  <div id="dashboardCard" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:600;color:var(--text)" id="dashMesLabel">—</div>
+      <div id="dashDias" style="font-size:11px;color:var(--text-3)"></div>
+    </div>
+    <!-- Balance mes -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--text-3)">Ingresos</div>
+        <div id="dashIng" style="font-size:14px;font-weight:700;color:var(--green)">$0</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--text-3)">Egresos</div>
+        <div id="dashEgr" style="font-size:14px;font-weight:700;color:var(--red)">$0</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--text-3)">Balance</div>
+        <div id="dashBal" style="font-size:14px;font-weight:700">$0</div>
+      </div>
+    </div>
+    <!-- Progreso ppto -->
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);margin-bottom:3px">
+        <span>Gasto vs presupuesto</span><span id="dashPptoPct">—</span>
+      </div>
+      <div style="background:var(--border-light);border-radius:4px;height:6px;overflow:hidden">
+        <div id="dashPptoBar" style="height:100%;border-radius:4px;transition:width .4s;background:var(--green);width:0%"></div>
+      </div>
+    </div>
+    <!-- Top categoría + ahorros -->
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3)">
+      <span>Mayor gasto: <strong id="dashTopCat" style="color:var(--text)">—</strong></span>
+      <span>Patrimonio: <strong id="dashPatrimonio" style="color:var(--text)">—</strong></span>
+    </div>
+  </div>
   <!-- Saldo Cuenta Corriente -->
   <div class="card" id="saldoCCCard">
     <div class="card-title">Saldo cuenta corriente</div>
@@ -183,40 +226,52 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     <!-- Métricas congeladas hasta nuevo guardado -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
       <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text-3)">Saldo guardado</div>
+        <div style="font-size:10px;color:var(--text-3)">Saldo guardado<span class="tip" tabindex="0"><span class="tip-icon">i</span><span class="tip-box">Último saldo ingresado manualmente en tu cuenta corriente</span></span></div>
         <div id="ccSaldoVal" style="font-size:14px;font-weight:600;color:var(--green)">$0</div>
       </div>
       <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text-3)">TC pendiente</div>
+        <div style="font-size:10px;color:var(--text-3)">TC pendiente<span class="tip" tabindex="0"><span class="tip-icon">i</span><span class="tip-box">Suma de todos los gastos con TC1 y TC2 aún no pagados a la tarjeta</span></span></div>
         <div id="ccTCVal" style="font-size:14px;font-weight:600;color:var(--red)">-$0</div>
       </div>
       <div style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text-3)">Ppto restante mes</div>
+        <div style="font-size:10px;color:var(--text-3)">Ppto restante mes<span class="tip" tabindex="0"><span class="tip-icon">i</span><span class="tip-box">Lo que aún puedes gastar este mes sin pasarte del presupuesto por categoría</span></span></div>
         <div id="ccPptoVal" style="font-size:14px;font-weight:600;color:var(--red)">-$0</div>
       </div>
       <div id="ccExtrasBox" style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--text-3)">Gastos extra mes</div>
+        <div style="font-size:10px;color:var(--text-3)">Gastos extra mes<span class="tip" tabindex="0"><span class="tip-icon">i</span><span class="tip-box">Total gastado por encima del presupuesto en categorías ya sobrepasadas</span></span></div>
         <div id="ccExtrasVal" style="font-size:14px;font-weight:600;color:var(--red)">$0</div>
       </div>
     </div>
     <div id="ccDisponible" style="border-radius:6px;padding:12px;border:1px solid var(--border);background:var(--surface)">
-      <div style="font-size:10px;color:var(--text-3)">Disponible real estimado</div>
+      <div style="font-size:10px;color:var(--text-3)">Disponible real estimado<span class="tip" tabindex="0"><span class="tip-icon">i</span><span class="tip-box">Saldo − TC pendiente − Ppto restante del mes. Estimación conservadora de lo que puedes gastar.</span></span></div>
       <div id="ccDisponibleVal" style="font-size:20px;font-weight:700;color:var(--text)">$0</div>
       <div style="font-size:10px;color:var(--text-3);margin-top:2px">= Saldo − TC − Ppto restante</div>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">Nuevo registro</div>
-    <!-- Fila 1: Tipo + Pagado con -->
-    <div class="form-row form-group">
+  <!-- Botones de acción -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">
+    <button onclick="abrirFormRegistro('Egresos')" style="padding:14px;font-size:14px;font-weight:600;border:none;border-radius:var(--radius-sm);background:rgba(192,57,43,.10);color:var(--red);cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(192,57,43,.18)'" onmouseout="this.style.background='rgba(192,57,43,.10)'">
+      ＋ Nuevo Egreso
+    </button>
+    <button onclick="abrirFormRegistro('Ingresos')" style="padding:14px;font-size:14px;font-weight:600;border:none;border-radius:var(--radius-sm);background:rgba(26,122,94,.10);color:var(--green);cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(26,122,94,.18)'" onmouseout="this.style.background='rgba(26,122,94,.10)'">
+      ＋ Nuevo Ingreso
+    </button>
+  </div>
+
+  <!-- Formulario oculto — se muestra al presionar los botones -->
+  <div id="formRegistroCard" class="card" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div id="formRegistroTitle" class="card-title" style="margin:0"></div>
+      <button onclick="cerrarFormRegistro()" style="border:none;background:none;font-size:18px;color:var(--text-3);cursor:pointer;padding:2px 6px">✕</button>
+    </div>
+    <!-- Hidden tipo -->
+    <select id="tipo" onchange="updCat()" style="display:none">
+      <option value="Egresos">Egreso</option>
+      <option value="Ingresos">Ingreso</option>
+    </select>
+    <!-- Pagado con + Fecha (egresos) -->
+    <div id="cellPagadoCon" class="form-row form-group">
       <div>
-        <label class="form-label">Tipo</label>
-        <select id="tipo" onchange="updCat()">
-          <option value="Egresos">Egreso</option>
-          <option value="Ingresos">Ingreso</option>
-        </select>
-      </div>
-      <div id="cellPagadoCon">
         <label class="form-label">Pagado con</label>
         <select id="gastoCon" onchange="updTipoPago()">
           <option>Cuenta Corriente</option>
@@ -224,24 +279,21 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
           <option value="TC2">Tarjeta de Crédito 2</option>
         </select>
       </div>
-    </div>
-    <!-- Fila 2: Tipo de pago + Fecha -->
-    <div id="rowTipoPago" class="form-row form-group">
-      <div>
-        <label class="form-label">Tipo de pago</label>
-        <div id="tipoPagoDisplay" style="padding:10px 11px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;background:var(--green-bg);color:var(--green)">✓ Pago Inmediato</div>
-      </div>
       <div>
         <label class="form-label">Fecha</label>
         <input type="date" id="fecha">
       </div>
     </div>
-    <!-- Fecha solo para ingresos -->
+    <!-- Tipo de pago badge -->
+    <div id="rowTipoPago" class="form-group">
+      <div id="tipoPagoDisplay" style="padding:9px 11px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;background:var(--green-bg);color:var(--green)">✓ Pago Inmediato</div>
+    </div>
+    <!-- Fecha para ingresos -->
     <div id="rowFechaSola" class="form-group" style="display:none">
       <label class="form-label">Fecha</label>
       <input type="date" id="fechaIngreso">
     </div>
-    <!-- Fila 3: Categoría + Subcategoría -->
+    <!-- Categoría + Subcategoría -->
     <div class="form-row form-group">
       <div>
         <label class="form-label">Categoría</label>
@@ -252,7 +304,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
         <select id="subcategoria" onchange="onSubChange()"></select>
       </div>
     </div>
-    <!-- Cuotas TC (solo Cuotas-TC) -->
+    <!-- Cuotas TC -->
     <div id="cuotaRow" style="display:none" class="form-row form-group">
       <div>
         <label class="form-label">Cuota actual N°</label>
@@ -263,17 +315,18 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
         <input type="number" id="cuotaTotal" placeholder="ej: 12" min="1" inputmode="numeric">
       </div>
     </div>
-    <!-- Monto -->
-    <div class="form-group">
-      <label class="form-label">Monto ($)</label>
-      <input type="text" id="monto" placeholder="0" class="fmt-input" inputmode="numeric" oninput="fmtInput(this)">
+    <!-- Monto + Comentario -->
+    <div class="form-row form-group">
+      <div style="flex:1">
+        <label class="form-label">Monto ($)</label>
+        <input type="text" id="monto" placeholder="0" class="fmt-input" inputmode="numeric" oninput="fmtInput(this)">
+      </div>
+      <div style="flex:2">
+        <label class="form-label">Comentario</label>
+        <input type="text" id="comentario" placeholder="Descripción o nota...">
+      </div>
     </div>
-    <!-- Comentario -->
-    <div class="form-group">
-      <label class="form-label">Comentario</label>
-      <input type="text" id="comentario" placeholder="Descripción o nota...">
-    </div>
-    <button class="btn-primary" onclick="guardar()">Guardar registro</button>
+    <button class="btn-primary" onclick="guardar()" style="width:100%">Guardar</button>
   </div>
 </div>
 </div>
@@ -386,7 +439,6 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <div class="htabs">
     <button class="htab active" onclick="selHTab('acum',this)">Acumulado</button>
     <button class="htab" onclick="selHTab('movs',this)">Movimientos</button>
-    <button class="htab" onclick="selHTab('tc',this)">Tarjetas TC</button>
   </div>
   <div id="hpanel-acum">
     <div class="card">
@@ -425,7 +477,10 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
       <select id="fTipo" onchange="renderHist()" style="flex:1;min-width:90px"><option value="">Ing+Egr</option><option value="Egresos">Egresos</option><option value="Ingresos">Ingresos</option></select>
       <select id="fCat" onchange="renderHist()" style="flex:1;min-width:100px"><option value="">Todas</option></select>
     </div>
-    <p id="histCount" style="font-size:11px;color:var(--text-3);margin-bottom:8px"></p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <p id="histCount" style="font-size:11px;color:var(--text-3);margin:0"></p>
+      <button onclick="exportarExcel()" style="font-size:11px;padding:5px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-2);cursor:pointer;font-family:inherit">📥 Exportar Excel</button>
+    </div>
     <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
       <table class="tbl" id="histTable"><thead><tr>
   <th onclick="sortHist('fecha')" style="cursor:pointer;user-select:none;white-space:nowrap" id="hth_fecha">Fecha <span id="hta_fecha">↓</span></th>
@@ -438,35 +493,32 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 </tr></thead>
       <tbody id="histBody"></tbody></table>
     </div></div>
-  </div>
-  <!-- PANEL TC -->
-  <div id="hpanel-tc" style="display:none">
-    <div class="card">
-      <div class="card-title">Resumen de tarjetas de crédito</div>
+    <!-- TC compact section -->
+    <div class="card" id="tcResumenCard" style="margin-top:10px">
+      <div class="card-title">Tarjetas de crédito</div>
       <div id="tcDetalle"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Registrar pago de tarjeta</div>
-      <div class="form-row form-group">
-        <div><label class="form-label">Tarjeta</label>
-          <select id="tcPagoTarjeta">
-            <option value="TC1">Tarjeta de Crédito 1</option>
-            <option value="TC2">Tarjeta de Crédito 2</option>
-          </select>
-        </div>
-        <div><label class="form-label">Fecha pago</label>
-          <input type="date" id="tcPagoFecha">
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:8px">Registrar pago</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:130px">
+            <label class="form-label">Tarjeta</label>
+            <select id="tcPagoTarjeta">
+              <option value="TC1">Tarjeta de Crédito 1</option>
+              <option value="TC2">Tarjeta de Crédito 2</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <label class="form-label">Fecha</label>
+            <input type="date" id="tcPagoFecha">
+          </div>
+          <div style="flex:1;min-width:100px">
+            <label class="form-label">Monto ($)</label>
+            <input type="text" id="tcPagoMonto" placeholder="0" class="fmt-input" inputmode="numeric" oninput="fmtInput(this)">
+          </div>
+          <button class="btn-secondary" onclick="registrarPagoTC()" style="padding:10px 14px;font-size:12px;white-space:nowrap">+ Registrar pago</button>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Monto pagado ($)</label>
-        <input type="text" id="tcPagoMonto" placeholder="0" class="fmt-input" inputmode="numeric" oninput="fmtInput(this)">
-      </div>
-      <button class="btn-primary" onclick="registrarPagoTC()">Registrar pago TC</button>
-    </div>
-    <div class="card">
-      <div class="card-title">Historial de pagos TC</div>
-      <div style="overflow-x:auto">
+      <div style="margin-top:10px;overflow-x:auto">
         <table class="tbl"><thead><tr><th>Fecha</th><th>Tarjeta</th><th style="text-align:right">Monto</th><th></th></tr></thead>
         <tbody id="tcPagosBody"></tbody></table>
       </div>
@@ -844,6 +896,7 @@ async function cargarDesdeGDrive(){
         datos=j.datos||[];ahorros=j.ahorros||[];
         presupuesto=j.presupuesto||{};pagosTC=j.pagosTC||[];
         saldosIniciales=j.saldosIniciales||{};
+        if(j.saldoCC&&j.saldoCC>0){saldoCC=j.saldoCC;localStorage.setItem('fc_cc',String(saldoCC));document.cookie='fc_cc='+saldoCC+';max-age=31536000;path=/';}
         saveLocal(); // actualizar local con datos de Drive
       } else {
         // Local tiene más datos — subir local a Drive
@@ -868,7 +921,7 @@ async function guardarEnGDrive(){
   if(!gdToken)return;
   try{
     setSyncStatus('ok','↑ Guardando...');
-    const body=JSON.stringify({datos,ahorros,presupuesto,pagosTC,saldosIniciales});
+    const body=JSON.stringify({datos,ahorros,presupuesto,pagosTC,saldosIniciales,saldoCC});
     if(gdFileId){
       await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${gdFileId}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body});
     }else{
@@ -888,6 +941,11 @@ function saveLocal(){
     localStorage.setItem('fc_tc',JSON.stringify(pagosTC));
     localStorage.setItem('fc_si',JSON.stringify(saldosIniciales));localStorage.setItem('fc_cc',String(saldoCC));
   }catch(e){}
+  // Normalize gastoCon values to TC1/TC2
+  datos.forEach(d=>{
+    if(d.gastoCon==='Tarjeta de Crédito 1')d.gastoCon='TC1';
+    else if(d.gastoCon==='Tarjeta de Crédito 2')d.gastoCon='TC2';
+  });
 }
 function save(){
   saveLocal(); // siempre guarda local primero
@@ -912,7 +970,7 @@ function sw(sec,el){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('sec-'+sec).classList.add('active');
   el.classList.add('active');
-  if(sec==='registro'){updCat();updSub();updTipoPago();}
+  if(sec==='registro'){calcSaldoCC();renderDashboard();}
   if(sec==='mes'){buildMesSelectors();renderMes();}
   if(sec==='anual'){buildAnualSelector();renderAnual();}
   if(sec==='presupuesto'){buildPptoSelectors();renderPpto();}
@@ -931,6 +989,67 @@ function selHTab(tab,el){
 }
 
 // ─── FORM ─────────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const hoy=new Date();
+  const mes=MESES[hoy.getMonth()];
+  const ano=hoy.getFullYear();
+  const diasMes=new Date(ano,hoy.getMonth()+1,0).getDate();
+  const diasRest=diasMes-hoy.getDate();
+  // Label
+  const lbl=document.getElementById('dashMesLabel');
+  if(lbl)lbl.textContent=mes+' '+ano;
+  const dias=document.getElementById('dashDias');
+  if(dias)dias.textContent=diasRest===0?'Último día del mes':`${diasRest} días restantes`;
+  // Ingresos/Egresos del mes
+  const mesD=datos.filter(d=>d.mes===mes&&d.año===ano);
+  const ing=mesD.filter(d=>d.tipo==='Ingresos').reduce((s,d)=>s+d.monto,0);
+  const egr=mesD.filter(d=>d.tipo==='Egresos').reduce((s,d)=>s+d.monto,0);
+  const bal=ing-egr;
+  const dashIng=document.getElementById('dashIng');if(dashIng)dashIng.textContent='$'+fmt(ing);
+  const dashEgr=document.getElementById('dashEgr');if(dashEgr)dashEgr.textContent='$'+fmt(egr);
+  const dashBal=document.getElementById('dashBal');
+  if(dashBal){dashBal.textContent=(bal>=0?'+':'-')+'$'+fmt(Math.abs(bal));dashBal.style.color=bal>=0?'var(--green)':'var(--red)';}
+  // Progreso ppto
+  const key=pptoKey(ano,mes);
+  const pp=presupuesto[key]||{};
+  const pptoTotal=Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).reduce((s,[,v])=>s+v,0);
+  const pct=pptoTotal>0?Math.round(egr/pptoTotal*100):0;
+  const pBar=document.getElementById('dashPptoBar');
+  const pPct=document.getElementById('dashPptoPct');
+  if(pBar){pBar.style.width=Math.min(100,pct)+'%';pBar.style.background=pct>100?'var(--red)':pct>85?'#d4860a':'var(--green)';}
+  if(pPct)pPct.textContent=pptoTotal>0?pct+'% del presupuesto':'Sin presupuesto';
+  // Top categoría
+  const cats={};mesD.filter(d=>d.tipo==='Egresos').forEach(d=>{cats[d.categoria]=(cats[d.categoria]||0)+d.monto;});
+  const topCat=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
+  const dashTop=document.getElementById('dashTopCat');
+  if(dashTop)dashTop.textContent=topCat?topCat[0]+' ($'+fmt(topCat[1])+')':'—';
+  // Patrimonio ahorros
+  let pat=Object.values(saldosIniciales).reduce((s,v)=>s+v,0);
+  ahorros.forEach(a=>{pat+=a.monto;});
+  const dashPat=document.getElementById('dashPatrimonio');
+  if(dashPat)dashPat.textContent='$'+fmt(pat);
+}
+function abrirFormRegistro(tipo){
+  // Set tipo
+  document.getElementById('tipo').value=tipo;
+  // Set title and color
+  const title=document.getElementById('formRegistroTitle');
+  title.textContent=tipo==='Egresos'?'Nuevo Egreso':'Nuevo Ingreso';
+  title.style.color=tipo==='Egresos'?'var(--red)':'var(--green)';
+  // Show form
+  document.getElementById('formRegistroCard').style.display='block';
+  // Update fields
+  updCat();updTipoPago();
+  // Clear previous values
+  document.getElementById('monto').value='';
+  document.getElementById('monto').dataset.raw='0';
+  document.getElementById('comentario').value='';
+  // Focus monto
+  setTimeout(()=>document.getElementById('monto').focus(),100);
+}
+function cerrarFormRegistro(){
+  document.getElementById('formRegistroCard').style.display='none';
+}
 function updCat(){
   const tipoEl=document.getElementById('tipo');
   if(!tipoEl)return;
@@ -989,6 +1108,29 @@ function guardar(){
   document.getElementById('monto').value='';document.getElementById('monto').dataset.raw='';
   document.getElementById('comentario').value='';
   if(cuotaActual!==null){document.getElementById('cuotaActual').value='';document.getElementById('cuotaTotal').value='';}
+  // Check if this egreso pushed any category over budget
+  if(tipo==='Egresos'){
+    const mes=MESES[parseLocalDate(fv).getMonth()];
+    const ano=parseLocalDate(fv).getFullYear();
+    const key=pptoKey(ano,mes);
+    const pp=presupuesto[key]||{};
+    const ppCat={};
+    Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const c=k.split('|')[0];ppCat[c]=(ppCat[c]||0)+v;});
+    const realCat={};
+    datos.filter(d=>d.tipo==='Egresos'&&d.mes===mes&&d.año===ano).forEach(d=>{realCat[d.categoria]=(realCat[d.categoria]||0)+d.monto;});
+    const alerts=[];
+    if(ppCat[cat]>0){
+      const pct=Math.round(realCat[cat]/ppCat[cat]*100);
+      if(pct>=100){alerts.push(`⚠️ ${cat}: ${pct}% del presupuesto ($${fmt(realCat[cat])} de $${fmt(ppCat[cat])})`);}
+      else if(pct>=85){alerts.push(`🔶 ${cat}: ${pct}% del presupuesto — te queda $${fmt(ppCat[cat]-realCat[cat])}`);}
+    }
+    if(alerts.length){
+      const el=document.getElementById('ppto-alert');
+      el.innerHTML=alerts.join('<br>');
+      el.style.display='block';
+      setTimeout(()=>{el.style.display='none';},5000);
+    }
+  }
   // Mejora 2: sugerir registro en ahorros si cat=Ahorro
   if(tipo==='Egresos'&&cat==='Ahorro'){
     pendingSuggMonto=monto;pendingSuggFecha=fv;
@@ -1016,6 +1158,35 @@ function confirmarAhorroSugg(){
   save();
   document.getElementById('ahorroSuggModal').style.display='none';
   showBanner('ok-banner');
+}
+function exportarExcel(){
+  if(!window.XLSX){alert('Cargando librería Excel, intenta en un momento...');return;}
+  const wb=XLSX.utils.book_new();
+  // Sheet 1: Movimientos
+  const movRows=datos.map(d=>({
+    Fecha:d.fecha,Año:d.año,Mes:d.mes,Tipo:d.tipo,
+    Categoría:d.categoria,Subcategoría:d.subcategoria,
+    Monto:d.monto,'Pagado con':TC_LABEL[d.gastoCon]||d.gastoCon||'',
+    'Tipo pago':d.tipoPago||'','Comentario':d.comentario||''
+  }));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(movRows),'Movimientos');
+  // Sheet 2: Ahorros
+  const ahRows=ahorros.map(a=>({
+    Fecha:a.fecha,Tipo:a.tipo,Instrumento:a.instrumento,
+    Monto:a.monto,Comentario:a.comentario||''
+  }));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ahRows),'Ahorros');
+  // Sheet 3: Presupuesto
+  const ppRows=[];
+  Object.entries(presupuesto).forEach(([key,pp])=>{
+    Object.entries(pp).forEach(([subKey,val])=>{
+      ppRows.push({'Período':key,'Tipo':subKey.startsWith('ING|')?'Ingreso':'Egreso','Clave':subKey,'Monto':val});
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ppRows),'Presupuesto');
+  // Download
+  const fecha=new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb,`Flujo_Caja_PEA_${fecha}.xlsx`);
 }
 function showBanner(id){const b=document.getElementById(id);b.style.display='block';setTimeout(()=>b.style.display='none',2200);}
 
@@ -1087,7 +1258,7 @@ function getMeses(ano){const yr=ano||null;return[...new Set(datos.filter(d=>!yr|
 // Mejora 1: getMesDatos filtra también por año activo
 function getMesDatos(mes){return datos.filter(d=>d.mes===mes);}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-function refreshAll(){updFiltros();}
+function refreshAll(){updFiltros();try{renderDashboard();}catch(e){}}
 // Mejora 1: clave de presupuesto incluye año
 function pptoKey(año,mes){return `${año}-${mes}`;}
 function getAnoActivo(){return new Date().getFullYear();}
@@ -1609,7 +1780,7 @@ function renderHist(){
       <td style="font-size:11px">${d.categoria}</td>
       <td style="font-size:11px;color:var(--text-2)">${d.subcategoria}${cuStr}</td>
       <td style="text-align:right;font-weight:600;white-space:nowrap;font-size:12px;color:${d.tipo==='Ingresos'?'var(--green)':'var(--text)'}">$${fmt(d.monto)}</td>
-      <td style="font-size:11px;color:var(--text-3)">${d.gastoCon||'—'}</td>
+      <td style="font-size:11px;color:var(--text-3)">${TC_LABEL[d.gastoCon]||d.gastoCon||'—'}</td>
       <td style="white-space:nowrap">
         <button class="btn-sm" onclick="editDato(${d.id})" title="Editar" style="margin-right:2px">✏️</button>
         <button class="btn-sm" onclick="delDato(${d.id})" title="Eliminar">✕</button>
@@ -1627,10 +1798,12 @@ function editDato(id){
   const subs=CATS[d.tipo][d.categoria]||[];
   const catOpts=cats.map(c=>`<option ${c===d.categoria?'selected':''}>${c}</option>`).join('');
   const subOpts=subs.map(s=>`<option ${s===d.subcategoria?'selected':''}>${s}</option>`).join('');
+  // Normalize stored value (TC1/TC2 or old "Tarjeta de Crédito X")
+  const gcVal=d.gastoCon==='Tarjeta de Crédito 1'?'TC1':d.gastoCon==='Tarjeta de Crédito 2'?'TC2':d.gastoCon||'Cuenta Corriente';
   const gastoCon=d.tipo==='Egresos'?`<select id="ec_gastoCon_${id}">
-    <option ${d.gastoCon==='Cuenta Corriente'?'selected':''}>Cuenta Corriente</option>
-    <option ${d.gastoCon==='Tarjeta de Crédito 1'?'selected':''}>Tarjeta de Crédito 1</option>
-    <option ${d.gastoCon==='Tarjeta de Crédito 2'?'selected':''}>Tarjeta de Crédito 2</option>
+    <option value="Cuenta Corriente" ${gcVal==='Cuenta Corriente'?'selected':''}>Cuenta Corriente</option>
+    <option value="TC1" ${gcVal==='TC1'?'selected':''}>Tarjeta de Crédito 1</option>
+    <option value="TC2" ${gcVal==='TC2'?'selected':''}>Tarjeta de Crédito 2</option>
   </select>`:'';
   row.className='edit-row';
   row.innerHTML=`
@@ -1676,8 +1849,8 @@ function saveDato(id,tipo){
     categoria:cat,
     subcategoria:sub,
     monto,
-    gastoCon:gastoConEl?gastoConEl.value:datos[idx].gastoCon,
-    tipoPago:gastoConEl?(gastoConEl.value==='Cuenta Corriente'?'Pago Inmediato':'Pago Futuro'):datos[idx].tipoPago,
+    gastoCon:gastoConEl?gastoConEl.value:(datos[idx].gastoCon==='Tarjeta de Crédito 1'?'TC1':datos[idx].gastoCon==='Tarjeta de Crédito 2'?'TC2':datos[idx].gastoCon),
+    tipoPago:gastoConEl?(gastoConEl.value==='Cuenta Corriente'?'Pago Inmediato':'Pago Futuro'):(datos[idx].tipoPago||'Pago Inmediato'),
     comentario:comentEl?comentEl.value:datos[idx].comentario
   };
   save();updFiltros();renderHist();renderAcum();
