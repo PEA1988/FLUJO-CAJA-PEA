@@ -1707,7 +1707,8 @@ function renderPptoComp(mes,ano){
               if(!total)return '';
               const p=Math.round(val/total*100);
               return p>0?p+'%':'';
-            }},
+            }}
+        },
         scales:{x:{ticks:{autoSkip:false,maxRotation:35,font:{size:9}}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}},
       plugins:window.ChartDataLabels?[ChartDataLabels]:[]
     });
