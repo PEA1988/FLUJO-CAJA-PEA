@@ -1380,7 +1380,7 @@ function renderMes(){
   const cL=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
   document.getElementById('catLegend').innerHTML=cL.map((l,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${CCOLORS[i%CCOLORS.length]}"></div>${l}</div>`).join('');
   destroyChart('catChart');
-  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{color:'#fff',font:{size:10,weight:'bold'},formatter:(val,ctx)=>{const tot=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);const p=Math.round(val/tot*100);return p>5?p+'%':''}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});
+  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:20},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'end',clamp:true,font:{size:9,weight:'600'},color:(ctx)=>CCOLORS[ctx.dataIndex%CCOLORS.length],formatter:(val,ctx)=>{const tot=ctx.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);const p=Math.round(val/tot*100);return p>0?p+'%':''}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});
   const dias={};d.forEach(x=>{if(!dias[x.fecha])dias[x.fecha]={ing:0,egr:0};if(x.tipo==='Ingresos')dias[x.fecha].ing+=x.monto;else dias[x.fecha].egr+=x.monto;});
   const dk=Object.keys(dias).sort();
   destroyChart('diaChart');
@@ -1391,7 +1391,7 @@ function renderMes(){
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{
     legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10}}},
     tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}},
-    datalabels:{anchor:'end',align:'top',font:{size:8,weight:'600'},color:'#666',display:(ctx)=>{if(dk.length>12)return false;const vals=ctx.chart.data.datasets[ctx.datasetIndex].data;const maxV=Math.max(...vals);return ctx.dataset.data[ctx.dataIndex]>=maxV*0.10;},formatter:(v,ctx)=>{const tot=ctx.datasetIndex===0?dIT:dET;if(!v||!tot)return'';const p=Math.round(v/tot*100);return p>=5?p+'%':''}}
+    datalabels:{anchor:'end',align:'top',font:{size:8,weight:'600'},color:'#666',display:true,formatter:(v,ctx)=>{const tot=ctx.datasetIndex===0?dIT:dET;if(!v||!tot)return'';const p=Math.round(v/tot*100);return p>0?p+'%':''}}
   },scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`$${fmt(v)}`,font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});}
   const total=Object.values(cats).reduce((s,v)=>s+v,0);
   document.getElementById('catDetail').innerHTML='<table class="tbl" id="catDetailTable"><thead><tr><th onclick="sortTable("cat",this)" data-col="cat" style="cursor:pointer;user-select:none;">Categoría <span class="sort-arrow"></span></th><th onclick="sortTable("monto",this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th onclick="sortTable("pct",this)" data-col="pct" style="cursor:pointer;user-select:none;text-align:right;">% <span class="sort-arrow"></span></th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>';
@@ -1465,7 +1465,7 @@ function renderAnual(){
   const cL=Object.keys(ct).sort((a,b)=>ct[b]-ct[a]);
   // rankWrap height fixed in grid layout
   destroyChart('rankChart');
-  if(cL.length){const rankTotal=cL.reduce((s,l)=>s+ct[l],0);charts['rankChart']=new Chart(document.getElementById('rankChart'),{type:'bar',data:{labels:cL,datasets:[{data:cL.map(l=>ct[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'right',font:{size:9,weight:'600'},color:'#555',display:(ctx)=>{if(cL.length>10)return false;const p=Math.round(ctx.dataset.data[ctx.dataIndex]/rankTotal*100);return p>=5;},formatter:(v)=>{if(!rankTotal)return'';const p=Math.round(v/rankTotal*100);return p+'%'}}},scales:{x:{ticks:{callback:v=>`$${fmt(v)}`}},y:{ticks:{font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]}  );}
+  if(cL.length){const rankTotal=cL.reduce((s,l)=>s+ct[l],0);charts['rankChart']=new Chart(document.getElementById('rankChart'),{type:'bar',data:{labels:cL,datasets:[{data:cL.map(l=>ct[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{anchor:'end',align:'right',font:{size:9,weight:'600'},color:'#555',display:true,formatter:(v)=>{if(!rankTotal||!v)return'';const p=Math.round(v/rankTotal*100);return p>0?p+'%':''}}},scales:{x:{ticks:{callback:v=>`$${fmt(v)}`}},y:{ticks:{font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]}  );}
 }
 
 // ─── PRESUPUESTO ──────────────────────────────────────────────────────────────
@@ -1712,7 +1712,7 @@ function renderPptoComp(mes,ano){
             {text:'Presupuesto (gris)',fillStyle:'rgba(180,180,185,.45)',strokeStyle:'transparent',lineWidth:0}
           ]}},
           tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${fmt(ctx.raw)}`}},
-          datalabels:{anchor:'end',align:'top',font:{size:9},color:'var(--text-2)',display:(ctx)=>{if(allCats.length>8)return false;if(ctx.datasetIndex!==0)return false;const vals=ctx.chart.data.datasets[0].data;const maxV=Math.max(...vals);return ctx.dataset.data[ctx.dataIndex]>=maxV*0.08;},formatter:(val,ctx)=>{if(ctx.datasetIndex!==0||!val)return '';const ppto=ctx.chart.data.datasets[1]?.data[ctx.dataIndex]||0;if(!ppto)return '';const p=Math.round(val/ppto*100);return p+'%';}}},
+          datalabels:{anchor:'end',align:'top',font:{size:9},color:'var(--text-2)',display:(ctx)=>ctx.datasetIndex===0&&!!ctx.dataset.data[ctx.dataIndex],formatter:(val,ctx)=>{if(ctx.datasetIndex!==0||!val)return '';const ppto=ctx.chart.data.datasets[1]?.data[ctx.dataIndex]||0;if(!ppto)return '';const p=Math.round(val/ppto*100);return p+'%';}}},
         scales:{x:{ticks:{autoSkip:false,maxRotation:35,font:{size:9}}},y:{ticks:{callback:v=>`$${fmt(v)}`}}}},
       plugins:window.ChartDataLabels?[ChartDataLabels]:[]
     });
@@ -1796,9 +1796,11 @@ function renderAcum(){
     data:{labels,datasets},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,font:{size:10}}},
-        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${fmt(ctx.raw)}`}}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: $${fmt(ctx.raw)}`}},
+        datalabels:{display:false}},
       scales:{x:{ticks:{autoSkip:true,maxTicksLimit:12,font:{size:9}}},
-        y:{ticks:{callback:v=>`$${fmt(v)}`},min:0}}}
+        y:{ticks:{callback:v=>`$${fmt(v)}`},min:0}}},
+    plugins:window.ChartDataLabels?[ChartDataLabels]:[]
   });
 }
 
