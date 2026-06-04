@@ -220,18 +220,22 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       <div id="dashDias" style="font-size:11px;color:var(--text-3)"></div>
     </div>
     <!-- Balance mes -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px">
       <div style="text-align:center">
         <div style="font-size:10px;color:var(--text-3)">Ingresos</div>
-        <div id="dashIng" style="font-size:14px;font-weight:700;color:var(--green)">$0</div>
+        <div id="dashIng" style="font-size:13px;font-weight:700;color:var(--green)">$0</div>
       </div>
       <div style="text-align:center">
         <div style="font-size:10px;color:var(--text-3)">Egresos</div>
-        <div id="dashEgr" style="font-size:14px;font-weight:700;color:var(--red)">$0</div>
+        <div id="dashEgr" style="font-size:13px;font-weight:700;color:var(--red)">$0</div>
       </div>
       <div style="text-align:center">
         <div style="font-size:10px;color:var(--text-3)">Balance</div>
-        <div id="dashBal" style="font-size:14px;font-weight:700">$0</div>
+        <div id="dashBal" style="font-size:13px;font-weight:700">$0</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:10px;color:var(--text-3)">Gastos extra</div>
+        <div id="dashExtra" style="font-size:13px;font-weight:700;color:var(--red)">$0</div>
       </div>
     </div>
     <!-- Progreso ppto -->
@@ -1047,6 +1051,10 @@ function renderDashboard(){
   const pp=presupuesto[key]||{};
   const pptoTotal=Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).reduce((s,[,v])=>s+v,0);
   const pct=pptoTotal>0?Math.round(egr/pptoTotal*100):0;
+  // Gastos extra = sum of categories over budget
+  const _ppC={};Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];_ppC[cat]=(_ppC[cat]||0)+v;});
+  const _gtC={};mesD.filter(d=>d.tipo==='Egresos').forEach(d=>{_gtC[d.categoria]=(_gtC[d.categoria]||0)+d.monto;});
+  let gastosExtra=0;Object.keys(_ppC).forEach(cat=>{const diff=(_gtC[cat]||0)-_ppC[cat];if(diff>0)gastosExtra+=diff;});
   const pBar=document.getElementById('dashPptoBar');
   const pPct=document.getElementById('dashPptoPct');
   if(pBar){pBar.style.width=Math.min(100,pct)+'%';pBar.style.background=pct>100?'var(--red)':pct>85?'#d4860a':'var(--green)';}
@@ -1056,6 +1064,11 @@ function renderDashboard(){
   const topCat=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
   const dashTop=document.getElementById('dashTopCat');
   if(dashTop)dashTop.textContent=topCat?topCat[0]+' ($'+fmt(topCat[1])+')':'—';
+  const dashEx=document.getElementById('dashExtra');
+  if(dashEx){
+    dashEx.textContent=gastosExtra>0?'$'+fmt(gastosExtra):'$0';
+    dashEx.style.color=gastosExtra>0?'var(--red)':'var(--text-3)';
+  }
   // Patrimonio ahorros
   let pat=Object.values(saldosIniciales).reduce((s,v)=>s+v,0);
   ahorros.forEach(a=>{pat+=a.monto;});
