@@ -99,6 +99,9 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .tc-name{font-size:12px;font-weight:600;color:var(--amber)}
 .tc-amount{font-size:15px;font-weight:600;color:var(--amber)}
 
+.sort-arrow{font-size:10px;color:var(--text-3)}
+th[data-col].active-sort{color:var(--blue)}
+th[data-col].active-sort .sort-arrow{color:var(--blue)}
 .tip{position:relative;display:inline-flex;align-items:center;margin-left:4px;cursor:help}
 .tip-icon{font-size:11px;color:var(--text-3);width:15px;height:15px;border-radius:50%;border:1px solid var(--text-3);display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
 .tip-box{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#333;color:#fff;font-size:11px;padding:6px 10px;border-radius:6px;white-space:nowrap;z-index:200;pointer-events:none;line-height:1.4;min-width:180px;max-width:240px;white-space:normal;text-align:center}
@@ -356,7 +359,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <div class="card">
     <div class="card-title">Presupuesto vs real — por categoría</div>
     <div style="overflow-x:auto">
-      <table class="tbl"><thead><tr><th>Categoría / Subcategoría</th><th style="text-align:right">Presupuesto</th><th style="text-align:right">Real</th><th style="text-align:right">Diferencia</th><th style="text-align:right">Estado</th></tr></thead>
+      <table class="tbl" id="pptoCompTable"><thead><tr><th>Categoría / Subcategoría</th><th onclick="sortTable('ppto',this)" data-col="ppto" style="cursor:pointer;user-select:none;text-align:right;">Presupuesto <span class="sort-arrow"></span></th><th onclick="sortTable('real',this)" data-col="real" style="cursor:pointer;user-select:none;text-align:right;">Real <span class="sort-arrow"></span></th><th onclick="sortTable('diff',this)" data-col="diff" style="cursor:pointer;user-select:none;text-align:right;">Diferencia <span class="sort-arrow"></span></th><th onclick="sortTable('estado',this)" data-col="estado" style="cursor:pointer;user-select:none;text-align:right;">Estado <span class="sort-arrow"></span></th></tr></thead>
       <tbody id="pptoBody"></tbody></table>
     </div>
   </div>
@@ -414,11 +417,9 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   <div class="card">
     <div class="card-title">Presupuestado vs real vs acumulado</div>
     <div style="overflow-x:auto">
-      <table class="tbl">
+      <table class="tbl" id="anualResTable">
         <thead><tr>
-          <th>Mes</th><th style="text-align:right">Ing real</th>
-          <th style="text-align:right">Egr ppto</th><th style="text-align:right">Egr real</th>
-          <th style="text-align:right">Diferencia</th><th style="text-align:right">Acumulado</th>
+          <th onclick="sortTable('mes',this)" data-col="mes" style="cursor:pointer;user-select:none;">Mes <span class="sort-arrow"></span></th><th onclick="sortTable('ing',this)" data-col="ing" style="cursor:pointer;user-select:none;text-align:right;">Ing real <span class="sort-arrow"></span></th><th onclick="sortTable('ppto',this)" data-col="ppto" style="cursor:pointer;user-select:none;text-align:right;">Egr ppto <span class="sort-arrow"></span></th><th onclick="sortTable('egr',this)" data-col="egr" style="cursor:pointer;user-select:none;text-align:right;">Egr real <span class="sort-arrow"></span></th><th onclick="sortTable('diff',this)" data-col="diff" style="cursor:pointer;user-select:none;text-align:right;">Diferencia <span class="sort-arrow"></span></th><th onclick="sortTable('acum',this)" data-col="acum" style="cursor:pointer;user-select:none;text-align:right;">Acumulado <span class="sort-arrow"></span></th>
         </tr></thead>
         <tbody id="resumenAnualBody"></tbody>
       </table>
@@ -462,7 +463,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     <div class="card">
       <div class="card-title">Acumulado por categoría y subcategoría</div>
       <div style="overflow-x:auto">
-        <table class="tbl"><thead><tr><th>Categoría</th><th>Subcategoría</th><th style="text-align:right">Total</th><th style="text-align:right">%</th></tr></thead>
+        <table class="tbl" id="acumTable"><thead><tr><th onclick="sortTable('cat',this)" data-col="cat" style="cursor:pointer;user-select:none;">Categoría <span class="sort-arrow"></span></th><th onclick="sortTable('sub',this)" data-col="sub" style="cursor:pointer;user-select:none;">Subcategoría <span class="sort-arrow"></span></th><th onclick="sortTable('total',this)" data-col="total" style="cursor:pointer;user-select:none;text-align:right;">Total <span class="sort-arrow"></span></th><th onclick="sortTable('pct',this)" data-col="pct" style="cursor:pointer;user-select:none;text-align:right;">% <span class="sort-arrow"></span></th></tr></thead>
         <tbody id="acumBody"></tbody></table>
       </div>
     </div>
@@ -519,7 +520,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
         </div>
       </div>
       <div style="margin-top:10px;overflow-x:auto">
-        <table class="tbl"><thead><tr><th>Fecha</th><th>Tarjeta</th><th style="text-align:right">Monto</th><th></th></tr></thead>
+        <table class="tbl" id="tcPagosTable"><thead><tr><th onclick="sortTable('fecha',this)" data-col="fecha" style="cursor:pointer;user-select:none;">Fecha <span class="sort-arrow"></span></th><th onclick="sortTable('tarjeta',this)" data-col="tarjeta" style="cursor:pointer;user-select:none;">Tarjeta <span class="sort-arrow"></span></th><th onclick="sortTable('monto',this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th></th></tr></thead>
         <tbody id="tcPagosBody"></tbody></table>
       </div>
     </div>
@@ -607,7 +608,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     <div class="card">
       <div class="card-title">Historial de traspasos</div>
       <div style="overflow-x:auto">
-        <table class="tbl"><thead><tr><th>Fecha</th><th>Origen</th><th>Destino</th><th style="text-align:right">Monto</th><th></th></tr></thead>
+        <table class="tbl" id="traspasoTable"><thead><tr><th onclick="sortTable('fecha',this)" data-col="fecha" style="cursor:pointer;user-select:none;">Fecha <span class="sort-arrow"></span></th><th onclick="sortTable('origen',this)" data-col="origen" style="cursor:pointer;user-select:none;">Origen <span class="sort-arrow"></span></th><th onclick="sortTable('dest',this)" data-col="dest" style="cursor:pointer;user-select:none;">Destino <span class="sort-arrow"></span></th><th onclick="sortTable('monto',this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th></th></tr></thead>
         <tbody id="traspasoHist"></tbody></table>
       </div>
     </div>
@@ -633,7 +634,7 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
     </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
-    <table class="tbl"><thead><tr><th>Fecha</th><th>Tipo</th><th>Instrumento</th><th style="text-align:right">Monto</th><th>Comentario</th><th style="width:60px"></th></tr></thead>
+    <table class="tbl" id="ahorroHistTable"><thead><tr><th onclick="sortTable('fecha',this)" data-col="fecha" style="cursor:pointer;user-select:none;">Fecha <span class="sort-arrow"></span></th><th onclick="sortTable('tipo',this)" data-col="tipo" style="cursor:pointer;user-select:none;">Tipo <span class="sort-arrow"></span></th><th onclick="sortTable('inst',this)" data-col="inst" style="cursor:pointer;user-select:none;">Instrumento <span class="sort-arrow"></span></th><th onclick="sortTable('monto',this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th onclick="sortTable('com',this)" data-col="com" style="cursor:pointer;user-select:none;">Comentario <span class="sort-arrow"></span></th><th style="width:60px"></th></tr></thead>
     <tbody id="ahorroHist"></tbody></table>
   </div></div>
 </div>
@@ -1188,6 +1189,37 @@ function exportarExcel(){
   const fecha=new Date().toISOString().split('T')[0];
   XLSX.writeFile(wb,`Flujo_Caja_PEA_${fecha}.xlsx`);
 }
+const _tableSorts={};
+function sortTable(col,thEl){
+  const tbl=thEl.closest('table');
+  const tid=tbl.id;
+  if(!tid)return;
+  if(!_tableSorts[tid])_tableSorts[tid]={col:null,asc:true};
+  const s=_tableSorts[tid];
+  if(s.col===col){s.asc=!s.asc;}else{s.col=col;s.asc=true;}
+  tbl.querySelectorAll('th[data-col]').forEach(th=>{
+    th.classList.remove('active-sort');
+    const arr=th.querySelector('.sort-arrow');
+    if(arr)arr.textContent='';
+  });
+  thEl.classList.add('active-sort');
+  const arr=thEl.querySelector('.sort-arrow');
+  if(arr)arr.textContent=s.asc?'↑':'↓';
+  const tbody=tbl.querySelector('tbody');
+  const rows=Array.from(tbody.querySelectorAll('tr:not(.total-row):not(.edit-row)'));
+  const totals=Array.from(tbody.querySelectorAll('tr.total-row'));
+  rows.sort((a,b)=>{
+    const ci=thEl.cellIndex;
+    const ca=(a.cells[ci]&&a.cells[ci].textContent)||'';
+    const cb=(b.cells[ci]&&b.cells[ci].textContent)||'';
+    const na=parseFloat(ca.replace(/[^0-9.-]/g,''));
+    const nb=parseFloat(cb.replace(/[^0-9.-]/g,''));
+    if(!isNaN(na)&&!isNaN(nb))return s.asc?na-nb:nb-na;
+    return s.asc?ca.localeCompare(cb,'es',{sensitivity:'base'}):cb.localeCompare(ca,'es',{sensitivity:'base'});
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+  totals.forEach(r=>tbody.appendChild(r));
+}
 function showBanner(id){const b=document.getElementById(id);b.style.display='block';setTimeout(()=>b.style.display='none',2200);}
 
 // ─── TC: GESTIÓN ──────────────────────────────────────────────────────────────
@@ -1328,7 +1360,7 @@ function renderMes(){
     tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}}
   },scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`$${fmt(v)}`,font:{size:10}}}}}});
   const total=Object.values(cats).reduce((s,v)=>s+v,0);
-  document.getElementById('catDetail').innerHTML='<table class="tbl"><thead><tr><th>Categoría</th><th style="text-align:right">Monto</th><th style="text-align:right">%</th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>';
+  document.getElementById('catDetail').innerHTML='<table class="tbl" id="catDetailTable"><thead><tr><th onclick="sortTable("cat",this)" data-col="cat" style="cursor:pointer;user-select:none;">Categoría <span class="sort-arrow"></span></th><th onclick="sortTable("monto",this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th onclick="sortTable("pct",this)" data-col="pct" style="cursor:pointer;user-select:none;text-align:right;">% <span class="sort-arrow"></span></th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>';
 }
 
 // ─── ANUAL ────────────────────────────────────────────────────────────────────
