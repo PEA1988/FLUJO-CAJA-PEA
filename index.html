@@ -333,7 +333,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
   <div class="card">
     <div class="card-title">Presupuesto vs real — por categoría</div>
     <div style="overflow-x:auto">
-      <table class="tbl" id="pptoCompTable"><thead><tr><th>Categoría / Subcategoría</th><th onclick="sortTable('ppto',this)" data-col="ppto" style="cursor:pointer;user-select:none;text-align:right;">Presupuesto <span class="sort-arrow"></span></th><th onclick="sortTable('real',this)" data-col="real" style="cursor:pointer;user-select:none;text-align:right;">Real <span class="sort-arrow"></span></th><th onclick="sortTable('diff',this)" data-col="diff" style="cursor:pointer;user-select:none;text-align:right;">Diferencia <span class="sort-arrow"></span></th><th onclick="sortTable('estado',this)" data-col="estado" style="cursor:pointer;user-select:none;text-align:right;">Estado <span class="sort-arrow"></span></th></tr></thead>
+      <table class="tbl" id="pptoCompTable"><thead><tr><th>Categoría / Subcategoría</th><th onclick="sortTable('ppto',this)" data-col="ppto" style="cursor:pointer;user-select:none;text-align:right;">Presupuesto <span class="sort-arrow"></span></th><th onclick="sortTable('real',this)" data-col="real" style="cursor:pointer;user-select:none;text-align:right;">Real <span class="sort-arrow"></span></th><th onclick="sortTable('diff',this)" data-col="diff" style="cursor:pointer;user-select:none;text-align:right;">Diferencia <span class="sort-arrow"></span></th><th onclick="sortTable('estado',this)" data-col="estado" style="cursor:pointer;user-select:none;text-align:right;">Estado <span class="sort-arrow"></span></th><th style="text-align:center;width:70px">Cerrar</th></tr></thead>
       <tbody id="pptoBody"></tbody></table>
     </div>
   </div>
@@ -1684,7 +1684,8 @@ function renderPptoComp(mes,ano){
         <td style="text-align:right;font-size:12px">${p?'$'+fmt(p):'—'}</td>
         <td style="text-align:right;font-size:12px;font-weight:600">$${fmt(r)}</td>
         <td style="text-align:right;font-size:12px;color:${dfColor}">${dfStr}</td>
-        <td style="text-align:right">${st}</td></tr>`;
+        <td style="text-align:right">${st}</td>
+        <td></td></tr>`;
       (cats[cat]||[]).forEach(sub=>{
         const sk=cat+'|'+sub;
         const ppKey=ppPrefix+sk;
@@ -1700,13 +1701,14 @@ function renderPptoComp(mes,ano){
         const subCerrada=!isIng&&_cerr[sk];
         // Para egresos: si queda presupuesto y no está cerrada, mostrar "por gastar"
         const pendiente=(!isIng&&sp>0&&sdf>0&&!subCerrada)?sdf:0;
-        const btnCerrar=(!isIng)?`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${sk.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${subCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${subCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 5px;display:inline-block;margin-top:2px">${subCerrada?'✓ cerrada':'cerrar'}</span>`:'';
+        const btnCerrar=(!isIng)?`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${sk.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${subCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${subCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:2px 7px;display:inline-block;white-space:nowrap">${subCerrada?'✓':'cerrar'}</span>`:'';
         html+=`<tr class="${catCls}" style="display:none;background:var(--surface)">
-          <td style="padding-left:28px;font-size:11px;color:var(--text-2)"><span style="${subCerrada?'opacity:.6':''}">↳ ${sub}${subCerrada?' 🔒':''}</span>${pendiente>0?`<span style="color:var(--green);font-size:9px;margin-left:6px">quedan $${fmt(pendiente)}</span>`:''} ${btnCerrar}</td>
+          <td style="padding-left:28px;font-size:11px;color:var(--text-2)"><span style="${subCerrada?'opacity:.6':''}">↳ ${sub}${subCerrada?' 🔒':''}</span>${pendiente>0?`<span style="color:var(--green);font-size:9px;margin-left:6px">quedan $${fmt(pendiente)}</span>`:''}</td>
           <td style="text-align:right;font-size:11px;color:var(--text-3)">${sp?'$'+fmt(sp):'—'}</td>
           <td style="text-align:right;font-size:11px">$${fmt(sr)}</td>
           <td style="text-align:right;font-size:11px;color:${sDfColor}">${sdf!==null?(sdf>=0?'+':'-')+'$'+fmt(Math.abs(sdf)):'—'}</td>
-          <td style="text-align:right">${sst}</td></tr>`;
+          <td style="text-align:right">${sst}</td>
+          <td style="text-align:center">${btnCerrar}</td></tr>`;
       });
     });
     return{html,tP,tR,cats:activeCats};
@@ -1719,23 +1721,23 @@ function renderPptoComp(mes,ano){
   let html='';
 
   if(egr.cats.length){
-    html+='<tr style="background:var(--red-bg)"><td colspan="5" style="font-size:10px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Egresos</td></tr>';
+    html+='<tr style="background:var(--red-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Egresos</td></tr>';
     html+=egr.html;
-    html+=`<tr class="total-row"><td style="color:var(--red)">Total Egresos</td><td style="text-align:right">$${fmt(egr.tP)}</td><td style="text-align:right">$${fmt(egr.tR)}</td><td style="text-align:right;color:${dfEgr>=0?'var(--green)'  :'var(--red)'}">${(dfEgr>=0?'+':'-')+ '$'+fmt(Math.abs(dfEgr))}</td><td></td></tr>`;
+    html+=`<tr class="total-row"><td style="color:var(--red)">Total Egresos</td><td style="text-align:right">$${fmt(egr.tP)}</td><td style="text-align:right">$${fmt(egr.tR)}</td><td style="text-align:right;color:${dfEgr>=0?'var(--green)'  :'var(--red)'}">${(dfEgr>=0?'+':'-')+ '$'+fmt(Math.abs(dfEgr))}</td><td></td><td></td></tr>`;
   }
   if(ing.cats.length){
-    html+='<tr style="background:var(--green-bg)"><td colspan="5" style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Ingresos</td></tr>';
+    html+='<tr style="background:var(--green-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Ingresos</td></tr>';
     html+=ing.html;
-    html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:${dfIng>=0?'var(--green)'  :'var(--red)'}">${(dfIng>=0?'+':'-')+'$'+fmt(Math.abs(dfIng))}</td><td></td></tr>`;
+    html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:${dfIng>=0?'var(--green)'  :'var(--red)'}">${(dfIng>=0?'+':'-')+'$'+fmt(Math.abs(dfIng))}</td><td></td><td></td></tr>`;
   }
   const balReal=ing.tR-egr.tR;
   const balPpto=ing.tP-egr.tP;
-  html+=`<tr style="background:var(--border-light)"><td colspan="5" style="padding:3px"></td></tr>
+  html+=`<tr style="background:var(--border-light)"><td colspan="6" style="padding:3px"></td></tr>
     <tr class="total-row" style="font-size:13px">
       <td>Balance neto</td>
       <td style="text-align:right;color:${balPpto>=0?'var(--green)'  :'var(--red)'}">${balPpto>=0?'+':'-'}$${fmt(Math.abs(balPpto))}</td>
       <td style="text-align:right;color:${balReal>=0?'var(--green)'  :'var(--red)'}">${balReal>=0?'+':'-'}$${fmt(Math.abs(balReal))}</td>
-      <td></td><td></td></tr>`;
+      <td></td><td></td><td></td></tr>`;
 
   document.getElementById('pptoBody').innerHTML=html;
   restorePptoExpanded();
