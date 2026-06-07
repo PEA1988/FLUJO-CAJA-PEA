@@ -1327,10 +1327,15 @@ function renderMesSaldoCC(){
   const tcTotal=tc1+tc2;
   const key=pptoKey(anoA,mesA);
   const pp=presupuesto[key]||{};
-  const ppC={};Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];ppC[cat]=(ppC[cat]||0)+v;});
-  const gtC={};datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesA&&d.año===anoA).forEach(d=>{gtC[d.categoria]=(gtC[d.categoria]||0)+d.monto;});
   const _pcKeyM=anoA+'-'+mesA;const _cerradasM=partidasCerradas[_pcKeyM]||{};
-  let pptoRestante=0;Object.keys(ppC).forEach(cat=>{if(_cerradasM[cat])return;const diff=ppC[cat]-(gtC[cat]||0);if(diff>0)pptoRestante+=diff;});
+  // Ppto restante a nivel SUBCATEGORÍA (excluye subcategorías cerradas)
+  const gtSub={};datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesA&&d.año===anoA).forEach(d=>{const sk=d.categoria+'|'+d.subcategoria;gtSub[sk]=(gtSub[sk]||0)+d.monto;});
+  let pptoRestante=0;
+  Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([sk,sp])=>{
+    if(_cerradasM[sk])return; // subcategoría cerrada
+    const diff=sp-(gtSub[sk]||0);
+    if(diff>0)pptoRestante+=diff;
+  });
   const disponible=scc-tcTotal-pptoRestante;
   cont.innerHTML=`
     <div class="metric m-green"><div class="metric-label">Saldo guardado</div><div class="metric-value" style="font-size:17px">$${fmt(scc)}</div></div>
@@ -1637,7 +1642,7 @@ function renderPptoComp(mes,ano){
       const p=ppCat[cat]||0,r=realCat[cat]||0;tP+=p;tR+=r;
       const pct=p>0?Math.round(r/p*100):null;
       const pcKey=ano+'-'+mes;
-      const cerrada=!isIng&&partidasCerradas[pcKey]&&partidasCerradas[pcKey][cat];
+      const _cerr=partidasCerradas[pcKey]||{};
       const bar=p>0?Math.min(100,Math.round(r/p*100)):0;
       // Real bar: green for ingresos, red for egresos (fixed colors matching the chart)
       const realBarColor=isIng?'rgba(26,122,94,.80)':'rgba(192,57,43,.80)';
@@ -1653,7 +1658,7 @@ function renderPptoComp(mes,ano){
         <td style="font-weight:600;font-size:12px">
           <span style="display:inline-flex;align-items:center;gap:5px">
             <span class="exp-arrow" style="font-size:9px;color:var(--text-3);transition:transform .2s">▸</span>
-            <span style="width:8px;height:8px;border-radius:2px;background:${colorArr[ci%colorArr.length]}"></span><span style="${cerrada?'opacity:.6':''}">${cat}${cerrada?' 🔒':''}</span>
+            <span style="width:8px;height:8px;border-radius:2px;background:${colorArr[ci%colorArr.length]}"></span>${cat}
           </span>
           <div style="margin-top:4px">
             <div style="font-size:9px;color:var(--text-3);margin-bottom:1px">Real</div>
@@ -1665,7 +1670,7 @@ function renderPptoComp(mes,ano){
         <td style="text-align:right;font-size:12px">${p?'$'+fmt(p):'—'}</td>
         <td style="text-align:right;font-size:12px;font-weight:600">$${fmt(r)}</td>
         <td style="text-align:right;font-size:12px;color:${dfColor}">${dfStr}</td>
-        <td style="text-align:right">${st}${(!isIng&&p>0&&df>0)?`<br><span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${cat.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${cerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${cerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 5px;display:inline-block;margin-top:3px">${cerrada?'✓ cerrada':'cerrar partida'}</span>`:''}</td></tr>`;
+        <td style="text-align:right">${st}</td></tr>`;
       (cats[cat]||[]).forEach(sub=>{
         const sk=cat+'|'+sub;
         const ppKey=ppPrefix+sk;
@@ -1677,10 +1682,13 @@ function renderPptoComp(mes,ano){
         const sst=spct===null?'<span style="color:var(--text-3);font-size:10px">—</span>':
           isIng?(spct>=100?`<span class="status-ok">${spct}%</span>`:`<span class="status-over">${spct}%</span>`):
           (spct>100?`<span class="status-over">+${spct-100}%</span>`:spct>85?`<span class="status-warn">${spct}%</span>`:`<span class="status-ok">${spct}%</span>`);
-        // Para egresos: si queda presupuesto, mostrar "por gastar"
-        const pendiente=(!isIng&&sp>0&&sdf>0)?sdf:0;
+        // Partida cerrada a nivel subcategoría
+        const subCerrada=!isIng&&_cerr[sk];
+        // Para egresos: si queda presupuesto y no está cerrada, mostrar "por gastar"
+        const pendiente=(!isIng&&sp>0&&sdf>0&&!subCerrada)?sdf:0;
+        const btnCerrar=(!isIng&&sp>0&&sdf>0)?`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${sk.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${subCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${subCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 5px;display:inline-block;margin-top:2px">${subCerrada?'✓ cerrada':'cerrar'}</span>`:'';
         html+=`<tr class="${catCls}" style="display:none;background:var(--surface)">
-          <td style="padding-left:28px;font-size:11px;color:var(--text-2)">↳ ${sub}${pendiente>0?`<span style="color:var(--green);font-size:9px;margin-left:6px">quedan $${fmt(pendiente)}</span>`:''}</td>
+          <td style="padding-left:28px;font-size:11px;color:var(--text-2)"><span style="${subCerrada?'opacity:.6':''}">↳ ${sub}${subCerrada?' 🔒':''}</span>${pendiente>0?`<span style="color:var(--green);font-size:9px;margin-left:6px">quedan $${fmt(pendiente)}</span>`:''} ${btnCerrar}</td>
           <td style="text-align:right;font-size:11px;color:var(--text-3)">${sp?'$'+fmt(sp):'—'}</td>
           <td style="text-align:right;font-size:11px">$${fmt(sr)}</td>
           <td style="text-align:right;font-size:11px;color:${sDfColor}">${sdf!==null?(sdf>=0?'+':'-')+'$'+fmt(Math.abs(sdf)):'—'}</td>
@@ -2315,13 +2323,18 @@ function calcSaldoCC(){
   const gastoPorCat={};
   datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesActual&&d.año===anoActual)
     .forEach(d=>{gastoPorCat[d.categoria]=(gastoPorCat[d.categoria]||0)+d.monto;});
+  // Build real spend per SUBcategory (for pptoRestante at subcat level)
+  const gastoPorSub={};
+  datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesActual&&d.año===anoActual)
+    .forEach(d=>{const sk=d.categoria+'|'+d.subcategoria;gastoPorSub[sk]=(gastoPorSub[sk]||0)+d.monto;});
   // Sum only categories where real < ppto (positive difference = money still available)
   const _pcKey=anoActual+'-'+mesActual;const _cerradas=partidasCerradas[_pcKey]||{};
+  // Ppto restante a nivel SUBCATEGORÍA (excluye subcategorías cerradas)
   let pptoRestante=0;
-  Object.keys(pptoPorCat).forEach(cat=>{
-    if(_cerradas[cat])return; // partida cerrada: no cuenta como pendiente
-    const diff=(pptoPorCat[cat]||0)-(gastoPorCat[cat]||0);
-    if(diff>0)pptoRestante+=diff; // only positive differences
+  Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([sk,sp])=>{
+    if(_cerradas[sk])return; // subcategoría cerrada
+    const diff=sp-(gastoPorSub[sk]||0);
+    if(diff>0)pptoRestante+=diff;
   });
   // Gastos extras = only categories/subcats over 100% of budget (ppto > 0 and real > ppto)
   let gastosExtra=0;
