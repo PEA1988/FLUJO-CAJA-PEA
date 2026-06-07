@@ -703,6 +703,7 @@ const TC_LABEL={'TC1':'Tarjeta de Crédito 1','TC2':'Tarjeta de Crédito 2'};
 
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
 let datos=[], ahorros=[], presupuesto={}, pagosTC=[], saldosIniciales={}, saldoCC=0, partidasCerradas={};
+let _pptoExpanded=new Set(); // category groups currently expanded in ppto table
 let histSort={col:'fecha',asc:false}; // default: most recent first
 let activeMes=0, activePptoMes=0, activeHTab='acum';
 let charts={};
@@ -1569,11 +1570,24 @@ function toggleSubRows(cls,headerEl){
     r.style.display=show?'table-row':'none';
     nowVisible=show;
   });
+  // Track expanded state
+  if(nowVisible)_pptoExpanded.add(cls);
+  else _pptoExpanded.delete(cls);
   // Rotate arrow
   if(headerEl){
     const arrow=headerEl.querySelector('.exp-arrow');
     if(arrow)arrow.style.transform=nowVisible?'rotate(90deg)':'rotate(0deg)';
   }
+}
+function restorePptoExpanded(){
+  _pptoExpanded.forEach(cls=>{
+    document.querySelectorAll('.'+cls).forEach(r=>{r.style.display='table-row';});
+    // rotate the matching arrow
+    document.querySelectorAll('tr[onclick*="'+cls+'"]').forEach(tr=>{
+      const arrow=tr.querySelector('.exp-arrow');
+      if(arrow)arrow.style.transform='rotate(90deg)';
+    });
+  });
 }
 function togglePptoSection(id){
   const el=document.getElementById(id);
@@ -1686,7 +1700,7 @@ function renderPptoComp(mes,ano){
         const subCerrada=!isIng&&_cerr[sk];
         // Para egresos: si queda presupuesto y no está cerrada, mostrar "por gastar"
         const pendiente=(!isIng&&sp>0&&sdf>0&&!subCerrada)?sdf:0;
-        const btnCerrar=(!isIng&&sp>0&&sdf>0)?`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${sk.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${subCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${subCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 5px;display:inline-block;margin-top:2px">${subCerrada?'✓ cerrada':'cerrar'}</span>`:'';
+        const btnCerrar=(!isIng&&sp>0)?`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${sk.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${subCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${subCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 5px;display:inline-block;margin-top:2px">${subCerrada?'✓ cerrada':'cerrar'}</span>`:'';
         html+=`<tr class="${catCls}" style="display:none;background:var(--surface)">
           <td style="padding-left:28px;font-size:11px;color:var(--text-2)"><span style="${subCerrada?'opacity:.6':''}">↳ ${sub}${subCerrada?' 🔒':''}</span>${pendiente>0?`<span style="color:var(--green);font-size:9px;margin-left:6px">quedan $${fmt(pendiente)}</span>`:''} ${btnCerrar}</td>
           <td style="text-align:right;font-size:11px;color:var(--text-3)">${sp?'$'+fmt(sp):'—'}</td>
@@ -1724,6 +1738,7 @@ function renderPptoComp(mes,ano){
       <td></td><td></td></tr>`;
 
   document.getElementById('pptoBody').innerHTML=html;
+  restorePptoExpanded();
 
   destroyChart('pptoChart');
   const allCats=[...egr.cats,...ing.cats];
