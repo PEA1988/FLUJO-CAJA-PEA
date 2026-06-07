@@ -702,7 +702,7 @@ const ACOLORS=['#5a9e8a','#6b93c4','#9b84c4','#b8936a','#c47a7a','#6aaec4','#8ea
 const TC_LABEL={'TC1':'Tarjeta de Crédito 1','TC2':'Tarjeta de Crédito 2'};
 
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
-let datos=[], ahorros=[], presupuesto={}, pagosTC=[], saldosIniciales={}, saldoCC=0;
+let datos=[], ahorros=[], presupuesto={}, pagosTC=[], saldosIniciales={}, saldoCC=0, partidasCerradas={};
 let histSort={col:'fecha',asc:false}; // default: most recent first
 let activeMes=0, activePptoMes=0, activeHTab='acum';
 let charts={};
@@ -878,6 +878,7 @@ async function cargarDesdeGDrive(){
         datos=j.datos||[];ahorros=j.ahorros||[];
         presupuesto=j.presupuesto||{};pagosTC=j.pagosTC||[];
         saldosIniciales=j.saldosIniciales||{};
+        if(j.partidasCerradas)partidasCerradas=j.partidasCerradas;
         if(j.saldoCC&&j.saldoCC>0){saldoCC=j.saldoCC;localStorage.setItem('fc_cc',String(saldoCC));document.cookie='fc_cc='+saldoCC+';max-age=31536000;path=/';}
         saveLocal(); // actualizar local con datos de Drive
       } else {
@@ -903,7 +904,7 @@ async function guardarEnGDrive(){
   if(!gdToken)return;
   try{
     setSyncStatus('ok','↑ Guardando...');
-    const body=JSON.stringify({datos,ahorros,presupuesto,pagosTC,saldosIniciales,saldoCC});
+    const body=JSON.stringify({datos,ahorros,presupuesto,pagosTC,saldosIniciales,saldoCC,partidasCerradas});
     if(gdFileId){
       await gdFetch(`https://www.googleapis.com/upload/drive/v3/files/${gdFileId}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body});
     }else{
@@ -921,7 +922,7 @@ function saveLocal(){
     localStorage.setItem('fc_a',JSON.stringify(ahorros));
     localStorage.setItem('fc_p',JSON.stringify(presupuesto));
     localStorage.setItem('fc_tc',JSON.stringify(pagosTC));
-    localStorage.setItem('fc_si',JSON.stringify(saldosIniciales));localStorage.setItem('fc_cc',String(saldoCC));
+    localStorage.setItem('fc_si',JSON.stringify(saldosIniciales));localStorage.setItem('fc_cc',String(saldoCC));localStorage.setItem('fc_pc',JSON.stringify(partidasCerradas));
   }catch(e){}
   // Normalize gastoCon values to TC1/TC2
   datos.forEach(d=>{
@@ -943,6 +944,7 @@ function loadLocal(){
     const tc=localStorage.getItem('fc_tc');if(tc)pagosTC=JSON.parse(tc);
     const si=localStorage.getItem('fc_si');if(si)saldosIniciales=JSON.parse(si);
     const scc=localStorage.getItem('fc_cc');if(scc!==null)saldoCC=parseFloat(scc)||0;
+    const pc=localStorage.getItem('fc_pc');if(pc)partidasCerradas=JSON.parse(pc);
   }catch(e){}
 }
 
@@ -1327,7 +1329,8 @@ function renderMesSaldoCC(){
   const pp=presupuesto[key]||{};
   const ppC={};Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];ppC[cat]=(ppC[cat]||0)+v;});
   const gtC={};datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesA&&d.año===anoA).forEach(d=>{gtC[d.categoria]=(gtC[d.categoria]||0)+d.monto;});
-  let pptoRestante=0;Object.keys(ppC).forEach(cat=>{const diff=ppC[cat]-(gtC[cat]||0);if(diff>0)pptoRestante+=diff;});
+  const _pcKeyM=anoA+'-'+mesA;const _cerradasM=partidasCerradas[_pcKeyM]||{};
+  let pptoRestante=0;Object.keys(ppC).forEach(cat=>{if(_cerradasM[cat])return;const diff=ppC[cat]-(gtC[cat]||0);if(diff>0)pptoRestante+=diff;});
   const disponible=scc-tcTotal-pptoRestante;
   cont.innerHTML=`
     <div class="metric m-green"><div class="metric-label">Saldo guardado</div><div class="metric-value" style="font-size:17px">$${fmt(scc)}</div></div>
@@ -1541,6 +1544,18 @@ function renderPpto(){
   document.getElementById('pptoInputs').innerHTML=html;
   renderPptoComp(mes,ano);
 }
+function toggleCerrarPartida(ano,mes,cat){
+  const key=ano+'-'+mes;
+  if(!partidasCerradas[key])partidasCerradas[key]={};
+  if(partidasCerradas[key][cat]){
+    delete partidasCerradas[key][cat];
+  }else{
+    partidasCerradas[key][cat]=true;
+  }
+  save();
+  renderPptoComp(mes,parseInt(ano));
+  try{calcSaldoCC();}catch(e){}
+}
 function toggleSubRows(cls,headerEl){
   const rows=document.querySelectorAll('.'+cls);
   let nowVisible=false;
@@ -1621,6 +1636,8 @@ function renderPptoComp(mes,ano){
     activeCats.forEach((cat,ci)=>{
       const p=ppCat[cat]||0,r=realCat[cat]||0;tP+=p;tR+=r;
       const pct=p>0?Math.round(r/p*100):null;
+      const pcKey=ano+'-'+mes;
+      const cerrada=!isIng&&partidasCerradas[pcKey]&&partidasCerradas[pcKey][cat];
       const bar=p>0?Math.min(100,Math.round(r/p*100)):0;
       // Real bar: green for ingresos, red for egresos (fixed colors matching the chart)
       const realBarColor=isIng?'rgba(26,122,94,.80)':'rgba(192,57,43,.80)';
@@ -1636,7 +1653,7 @@ function renderPptoComp(mes,ano){
         <td style="font-weight:600;font-size:12px">
           <span style="display:inline-flex;align-items:center;gap:5px">
             <span class="exp-arrow" style="font-size:9px;color:var(--text-3);transition:transform .2s">▸</span>
-            <span style="width:8px;height:8px;border-radius:2px;background:${colorArr[ci%colorArr.length]}"></span>${cat}
+            <span style="width:8px;height:8px;border-radius:2px;background:${colorArr[ci%colorArr.length]}"></span><span style="${cerrada?'opacity:.6':''}">${cat}${cerrada?' 🔒':''}</span>
           </span>
           <div style="margin-top:4px">
             <div style="font-size:9px;color:var(--text-3);margin-bottom:1px">Real</div>
@@ -1648,7 +1665,7 @@ function renderPptoComp(mes,ano){
         <td style="text-align:right;font-size:12px">${p?'$'+fmt(p):'—'}</td>
         <td style="text-align:right;font-size:12px;font-weight:600">$${fmt(r)}</td>
         <td style="text-align:right;font-size:12px;color:${dfColor}">${dfStr}</td>
-        <td style="text-align:right">${st}</td></tr>`;
+        <td style="text-align:right">${st}${(!isIng&&p>0&&df>0)?`<br><span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${cat.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${cerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${cerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 5px;display:inline-block;margin-top:3px">${cerrada?'✓ cerrada':'cerrar partida'}</span>`:''}</td></tr>`;
       (cats[cat]||[]).forEach(sub=>{
         const sk=cat+'|'+sub;
         const ppKey=ppPrefix+sk;
@@ -2299,8 +2316,10 @@ function calcSaldoCC(){
   datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesActual&&d.año===anoActual)
     .forEach(d=>{gastoPorCat[d.categoria]=(gastoPorCat[d.categoria]||0)+d.monto;});
   // Sum only categories where real < ppto (positive difference = money still available)
+  const _pcKey=anoActual+'-'+mesActual;const _cerradas=partidasCerradas[_pcKey]||{};
   let pptoRestante=0;
   Object.keys(pptoPorCat).forEach(cat=>{
+    if(_cerradas[cat])return; // partida cerrada: no cuenta como pendiente
     const diff=(pptoPorCat[cat]||0)-(gastoPorCat[cat]||0);
     if(diff>0)pptoRestante+=diff; // only positive differences
   });
