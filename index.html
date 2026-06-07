@@ -1541,6 +1541,20 @@ function renderPpto(){
   document.getElementById('pptoInputs').innerHTML=html;
   renderPptoComp(mes,ano);
 }
+function toggleSubRows(cls,headerEl){
+  const rows=document.querySelectorAll('.'+cls);
+  let nowVisible=false;
+  rows.forEach(r=>{
+    const show=r.style.display==='none';
+    r.style.display=show?'table-row':'none';
+    nowVisible=show;
+  });
+  // Rotate arrow
+  if(headerEl){
+    const arrow=headerEl.querySelector('.exp-arrow');
+    if(arrow)arrow.style.transform=nowVisible?'rotate(90deg)':'rotate(0deg)';
+  }
+}
 function togglePptoSection(id){
   const el=document.getElementById(id);
   const arrow=document.getElementById(id+'_arrow');
@@ -1617,9 +1631,11 @@ function renderPptoComp(mes,ano){
       const df=p>0?p-r:null;
       const dfColor=isIng?(df!==null&&df<=0?'var(--green)'  :'var(--red)'):(df!==null&&df>=0?'var(--green)'  :'var(--red)');
       const dfStr=df!==null?(df<=0&&isIng?'+':df>=0&&!isIng?'+':'-')+'$'+fmt(Math.abs(df)):'—';
-      html+=`<tr style="background:var(--border-light);cursor:pointer" onclick="toggleSubRows('sr_${tipo}_${cat.replace(/[^a-z]/gi,'_')}')">
+      const catCls='sr_'+tipo+'_'+cat.replace(/[^a-z]/gi,'_');
+      html+=`<tr style="background:var(--border-light);cursor:pointer" onclick="toggleSubRows('${catCls}',this)">
         <td style="font-weight:600;font-size:12px">
           <span style="display:inline-flex;align-items:center;gap:5px">
+            <span class="exp-arrow" style="font-size:9px;color:var(--text-3);transition:transform .2s">▸</span>
             <span style="width:8px;height:8px;border-radius:2px;background:${colorArr[ci%colorArr.length]}"></span>${cat}
           </span>
           <div style="margin-top:4px">
@@ -1644,11 +1660,13 @@ function renderPptoComp(mes,ano){
         const sst=spct===null?'<span style="color:var(--text-3);font-size:10px">—</span>':
           isIng?(spct>=100?`<span class="status-ok">${spct}%</span>`:`<span class="status-over">${spct}%</span>`):
           (spct>100?`<span class="status-over">+${spct-100}%</span>`:spct>85?`<span class="status-warn">${spct}%</span>`:`<span class="status-ok">${spct}%</span>`);
-        html+=`<tr class="sr_${tipo}_${cat.replace(/[^a-z]/gi,'_')}" style="display:none">
-          <td style="padding-left:20px;font-size:11px;color:var(--text-2)">${sub}</td>
+        // Para egresos: si queda presupuesto, mostrar "por gastar"
+        const pendiente=(!isIng&&sp>0&&sdf>0)?sdf:0;
+        html+=`<tr class="${catCls}" style="display:none;background:var(--surface)">
+          <td style="padding-left:28px;font-size:11px;color:var(--text-2)">↳ ${sub}${pendiente>0?`<span style="color:var(--green);font-size:9px;margin-left:6px">quedan $${fmt(pendiente)}</span>`:''}</td>
           <td style="text-align:right;font-size:11px;color:var(--text-3)">${sp?'$'+fmt(sp):'—'}</td>
           <td style="text-align:right;font-size:11px">$${fmt(sr)}</td>
-          <td style="text-align:right;font-size:11px;color:${sDfColor}">${sdf!==null?'$'+fmt(Math.abs(sdf)):'—'}</td>
+          <td style="text-align:right;font-size:11px;color:${sDfColor}">${sdf!==null?(sdf>=0?'+':'-')+'$'+fmt(Math.abs(sdf)):'—'}</td>
           <td style="text-align:right">${sst}</td></tr>`;
       });
     });
