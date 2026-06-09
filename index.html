@@ -100,17 +100,22 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
   #mesChartsGrid{grid-template-columns:1fr!important;gap:8px}
   /* Presupuesto table fits mobile without zoom */
   #pptoCompTable{font-size:9px;table-layout:fixed;width:100%}
-  #pptoCompTable th,#pptoCompTable td{padding:4px 2px;overflow:hidden;text-overflow:ellipsis}
+  #pptoCompTable th,#pptoCompTable td{padding:4px 1px;overflow:hidden}
   #pptoCompTable .pbar{display:none}
   /* Columnas: 1=nombre 2=cerrar 3=ppto 4=real 5=dif 6=estado */
   /* Ocultar Estado (6) en móvil; el dato está en Diferencia */
   #pptoCompTable th:nth-child(6),#pptoCompTable td:nth-child(6){display:none}
-  #pptoCompTable th:nth-child(1),#pptoCompTable td:nth-child(1){width:34%}
-  #pptoCompTable th:nth-child(2),#pptoCompTable td:nth-child(2){width:13%}
+  /* Nombre y cerrar más angostos; montos con espacio suficiente */
+  #pptoCompTable th:nth-child(1),#pptoCompTable td:nth-child(1){width:26%}
+  #pptoCompTable th:nth-child(2),#pptoCompTable td:nth-child(2){width:11%}
   #pptoCompTable th:nth-child(3),#pptoCompTable td:nth-child(3),
   #pptoCompTable th:nth-child(4),#pptoCompTable td:nth-child(4),
-  #pptoCompTable th:nth-child(5),#pptoCompTable td:nth-child(5){width:17.6%}
+  #pptoCompTable th:nth-child(5),#pptoCompTable td:nth-child(5){width:21%}
+  /* Montos en una sola línea, sin cortarse */
+  #pptoCompTable td:nth-child(3),#pptoCompTable td:nth-child(4),#pptoCompTable td:nth-child(5){white-space:nowrap;font-size:9px}
   #pptoCompTable td:first-child span{white-space:normal;word-break:break-word}
+  /* Botón cerrar compacto en móvil */
+  #pptoCompTable td:nth-child(2) span{padding:1px 3px!important;font-size:8px!important}
   [style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
   [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
   .form-row{grid-template-columns:1fr!important}
