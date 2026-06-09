@@ -15,6 +15,8 @@
   --green-bg:rgba(78,201,148,.10);--red-bg:rgba(224,104,112,.10);
   --radius:10px;--radius-sm:7px;
   --purple:#a88de8;
+  --orange:#e0985a;
+  --orange-bg:rgba(224,152,90,.10);
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -40,6 +42,7 @@ body{font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;background:va
 .m-green .metric-value{color:var(--green)}.m-red .metric-value{color:var(--red)}
 .m-blue .metric-value{color:var(--blue)}.m-amber .metric-value{color:var(--amber)}
 .m-purple .metric-value{color:var(--purple)}
+.m-orange .metric-value{color:var(--orange)}
 .form-group{margin-bottom:11px}
 .form-label{font-size:12px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px}
 select,input[type=text],input[type=number],input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:16px;color:var(--text);background:var(--bg);appearance:none;-webkit-appearance:none;font-family:inherit}
@@ -95,6 +98,11 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .sort-arrow{font-size:10px;color:var(--text-3)}
 @media(max-width:600px){
   #mesChartsGrid{grid-template-columns:1fr!important;gap:8px}
+  /* Presupuesto table fits mobile without zoom */
+  #pptoCompTable{font-size:10px}
+  #pptoCompTable th,#pptoCompTable td{padding:5px 3px}
+  #pptoCompTable .pbar{display:none} /* hide bars on mobile to save width */
+  #pptoCompTable td:first-child{max-width:130px}
   [style*="grid-template-columns:1fr 1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
   [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
   .form-row{grid-template-columns:1fr!important}
@@ -216,7 +224,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       </div>
       <div id="ccExtrasBox" style="background:var(--surface);border-radius:6px;padding:10px;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text-3)">Gastos extra mes<span class="tip" tabindex="0"><span class="tip-icon">i</span><span class="tip-box">Total gastado por encima del presupuesto en categorías ya sobrepasadas</span></span></div>
-        <div id="ccExtrasVal" style="font-size:14px;font-weight:600;color:var(--red)">$0</div>
+        <div id="ccExtrasVal" style="font-size:14px;font-weight:600;color:var(--orange)">$0</div>
       </div>
     </div>
     <div id="ccDisponible" style="border-radius:6px;padding:12px;border:1px solid var(--border);background:var(--surface)">
@@ -333,7 +341,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
   <div class="card">
     <div class="card-title">Presupuesto vs real — por categoría</div>
     <div style="overflow-x:auto">
-      <table class="tbl" id="pptoCompTable"><thead><tr><th>Categoría / Subcategoría</th><th onclick="sortTable('ppto',this)" data-col="ppto" style="cursor:pointer;user-select:none;text-align:right;">Presupuesto <span class="sort-arrow"></span></th><th onclick="sortTable('real',this)" data-col="real" style="cursor:pointer;user-select:none;text-align:right;">Real <span class="sort-arrow"></span></th><th onclick="sortTable('diff',this)" data-col="diff" style="cursor:pointer;user-select:none;text-align:right;">Diferencia <span class="sort-arrow"></span></th><th onclick="sortTable('estado',this)" data-col="estado" style="cursor:pointer;user-select:none;text-align:right;">Estado <span class="sort-arrow"></span></th><th style="text-align:center;width:70px">Cerrar</th></tr></thead>
+      <table class="tbl" id="pptoCompTable"><thead><tr><th>Categoría / Subcategoría</th><th onclick="sortTable('ppto',this)" data-col="ppto" style="cursor:pointer;user-select:none;text-align:right;">Presupuesto <span class="sort-arrow"></span></th><th onclick="sortTable('real',this)" data-col="real" style="cursor:pointer;user-select:none;text-align:right;">Real <span class="sort-arrow"></span></th><th onclick="sortTable('diff',this)" data-col="diff" style="cursor:pointer;user-select:none;text-align:right;">Diferencia <span class="sort-arrow"></span></th><th onclick="sortTable('estado',this)" data-col="estado" style="cursor:pointer;user-select:none;text-align:right;">Estado <span class="sort-arrow"></span></th></tr></thead>
       <tbody id="pptoBody"></tbody></table>
     </div>
   </div>
@@ -1005,7 +1013,7 @@ function renderDashboard(){
     <div class="metric m-blue"><div class="metric-label">Ingresos</div><div class="metric-value">$${fmt(ing)}</div></div>
     <div class="metric m-red"><div class="metric-label">Egresos</div><div class="metric-value">$${fmt(egr)}</div></div>
     <div class="metric ${bal>=0?'m-green':'m-red'}"><div class="metric-label">Balance del mes</div><div class="metric-value">${bal>=0?'+':'-'}$${fmt(Math.abs(bal))}</div></div>
-    <div class="metric ${gastosExtra>0?'m-red':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtra)}</div></div>
+    <div class="metric ${gastosExtra>0?'m-orange':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtra)}</div></div>
     <div class="metric" style="grid-column:span 2"><div class="metric-label">Gasto vs presupuesto · ${pct}%</div>
       <div style="background:var(--border-light);border-radius:4px;height:8px;overflow:hidden;margin-top:6px">
         <div style="height:100%;border-radius:4px;width:${Math.min(100,pct)}%;background:${barColor};transition:width .4s"></div>
@@ -1333,7 +1341,8 @@ function renderMesSaldoCC(){
   const gtSub={};datos.filter(d=>d.tipo==='Egresos'&&d.mes===mesA&&d.año===anoA).forEach(d=>{const sk=d.categoria+'|'+d.subcategoria;gtSub[sk]=(gtSub[sk]||0)+d.monto;});
   let pptoRestante=0;
   Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([sk,sp])=>{
-    if(_cerradasM[sk])return; // subcategoría cerrada
+    const _catM=sk.split('|')[0];
+    if(_cerradasM[sk]||_cerradasM['CAT|'+_catM])return; // subcat o categoría cerrada
     const diff=sp-(gtSub[sk]||0);
     if(diff>0)pptoRestante+=diff;
   });
@@ -1375,7 +1384,7 @@ function renderMes(){
     <div class="metric m-blue"><div class="metric-label">Ingresos</div><div class="metric-value">$${fmt(ing)}</div></div>
     <div class="metric m-red"><div class="metric-label">Egresos</div><div class="metric-value">$${fmt(egr)}</div></div>
     <div class="metric ${bal>=0?'m-green':'m-red'}"><div class="metric-label">Balance del mes</div><div class="metric-value">${bal>=0?'+':'-'}$${fmt(Math.abs(bal))}</div></div>
-    <div class="metric ${gastosExtraM>0?'m-red':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtraM)}</div></div>
+    <div class="metric ${gastosExtraM>0?'m-orange':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtraM)}</div></div>
     <div class="metric" style="grid-column:span 2"><div class="metric-label">Gasto vs presupuesto · ${pctPpto}%</div>
       <div style="background:var(--border-light);border-radius:4px;height:8px;overflow:hidden;margin-top:6px">
         <div style="height:100%;border-radius:4px;width:${Math.min(100,pctPpto)}%;background:${barColor};transition:width .4s"></div>
@@ -1671,11 +1680,12 @@ function renderPptoComp(mes,ano){
       }else{
         // Sumar solo subcategorías abiertas con saldo positivo
         let pendCat=0;
+        const _catCerrada=_cerr['CAT|'+cat];
         (cats[cat]||[]).forEach(sub=>{
           const _sk=cat+'|'+sub;
           const _sp=pp[ppPrefix+_sk]||0;
           const _sr=realSub[_sk]||0;
-          const _cerrada=_cerr[_sk];
+          const _cerrada=_cerr[_sk]||_catCerrada;
           const _diff=_sp-_sr;
           if(!_cerrada&&_diff>0)pendCat+=_diff;
         });
@@ -1686,11 +1696,13 @@ function renderPptoComp(mes,ano){
       const dfColor=isIng?(df!==null&&df<=0?'var(--green)'  :'var(--red)'):'var(--green)';
       const dfStr=df===null?'—':(isIng?((df<=0?'+':'-')+'$'+fmt(Math.abs(df))):'$'+fmt(df));
       const catCls='sr_'+tipo+'_'+cat.replace(/[^a-z]/gi,'_');
+      const catCerrada=_cerr['CAT|'+cat];
+      const btnCatCerrar=`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','CAT|${cat.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${catCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${catCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 6px;white-space:nowrap;margin-left:6px">${catCerrada?'✓':'cerrar'}</span>`;
       html+=`<tr style="background:var(--border-light);cursor:pointer" onclick="toggleSubRows('${catCls}',this)">
         <td style="font-weight:600;font-size:12px">
-          <span style="display:inline-flex;align-items:center;gap:5px">
+          <span style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap">
             <span class="exp-arrow" style="font-size:9px;color:var(--text-3);transition:transform .2s">▸</span>
-            <span style="width:8px;height:8px;border-radius:2px;background:${colorArr[ci%colorArr.length]}"></span>${cat}
+            <span style="width:8px;height:8px;border-radius:2px;background:${colorArr[ci%colorArr.length]}"></span><span style="${catCerrada?'opacity:.6':''}">${cat}${catCerrada?' 🔒':''}</span>${btnCatCerrar}
           </span>
           <div style="margin-top:4px">
             <div style="font-size:9px;color:var(--text-3);margin-bottom:1px">Real</div>
@@ -1702,8 +1714,7 @@ function renderPptoComp(mes,ano){
         <td style="text-align:right;font-size:12px">${p?'$'+fmt(p):'—'}</td>
         <td style="text-align:right;font-size:12px;font-weight:600">$${fmt(r)}</td>
         <td style="text-align:right;font-size:12px;color:${dfColor}">${dfStr}</td>
-        <td style="text-align:right">${st}</td>
-        <td></td></tr>`;
+        <td style="text-align:right">${st}</td></tr>`;
       (cats[cat]||[]).forEach(sub=>{
         const sk=cat+'|'+sub;
         const ppKey=ppPrefix+sk;
@@ -1716,19 +1727,18 @@ function renderPptoComp(mes,ano){
           isIng?(spct>=100?`<span class="status-ok">${spct}%</span>`:`<span class="status-over">${spct}%</span>`):
           (spct>100?`<span class="status-over">+${spct-100}%</span>`:spct>85?`<span class="status-warn">${spct}%</span>`:`<span class="status-ok">${spct}%</span>`);
         // Partida cerrada a nivel subcategoría
-        const subCerrada=!isIng&&_cerr[sk];
-        // Diferencia mostrada: cerrada o sobre-ppto = $0, abierta con saldo = pendiente
+        // Cerrada: por subcategoría O por categoría padre cerrada
+        const subCerrada=_cerr[sk]||_cerr['CAT|'+cat];
         const subDifShown=(subCerrada||sdf===null||sdf<0)?0:(sdf>0?sdf:0);
-        // Para egresos: si queda presupuesto y no está cerrada, mostrar "por gastar"
         const pendiente=(!isIng&&sp>0&&sdf>0&&!subCerrada)?sdf:0;
-        const btnCerrar=(!isIng)?`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${sk.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${subCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${subCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:2px 7px;display:inline-block;white-space:nowrap">${subCerrada?'✓':'cerrar'}</span>`:'';
+        // Botón cerrar en TODAS las subcategorías (ingresos y egresos)
+        const btnCerrar=`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${sk.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${_cerr[sk]?'var(--amber)':'var(--text-3)'};border:1px solid ${_cerr[sk]?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 6px;white-space:nowrap;margin-left:6px">${_cerr[sk]?'✓':'cerrar'}</span>`;
         html+=`<tr class="${catCls}" style="display:none;background:var(--surface)">
-          <td style="padding-left:28px;font-size:11px;color:var(--text-2)"><span style="${subCerrada?'opacity:.6':''}">↳ ${sub}${subCerrada?' 🔒':''}</span>${pendiente>0?`<span style="color:var(--green);font-size:9px;margin-left:6px">quedan $${fmt(pendiente)}</span>`:''}</td>
+          <td style="padding-left:24px;font-size:11px;color:var(--text-2)"><span style="${subCerrada?'opacity:.6':''}">↳ ${sub}${subCerrada?' 🔒':''}</span>${pendiente>0?`<span style="color:var(--green);font-size:9px;margin-left:4px">quedan $${fmt(pendiente)}</span>`:''}${btnCerrar}</td>
           <td style="text-align:right;font-size:11px;color:var(--text-3)">${sp?'$'+fmt(sp):'—'}</td>
           <td style="text-align:right;font-size:11px">$${fmt(sr)}</td>
           <td style="text-align:right;font-size:11px;color:${(!isIng&&subDifShown>0)?'var(--green)':'var(--text-3)'}">${(!isIng)?'$'+fmt(subDifShown):(sdf!==null?(sdf>=0?'+':'-')+'$'+fmt(Math.abs(sdf)):'—')}</td>
-          <td style="text-align:right">${sst}</td>
-          <td style="text-align:center">${btnCerrar}</td></tr>`;
+          <td style="text-align:right">${sst}</td></tr>`;
       });
     });
     return{html,tP,tR,tPend,cats:activeCats};
@@ -1741,23 +1751,23 @@ function renderPptoComp(mes,ano){
   let html='';
 
   if(egr.cats.length){
-    html+='<tr style="background:var(--red-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Egresos</td></tr>';
+    html+='<tr style="background:var(--red-bg)"><td colspan="5" style="font-size:10px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Egresos</td></tr>';
     html+=egr.html;
-    html+=`<tr class="total-row"><td style="color:var(--red)">Total Egresos</td><td style="text-align:right">$${fmt(egr.tP)}</td><td style="text-align:right">$${fmt(egr.tR)}</td><td style="text-align:right;color:var(--green)" title="Pendiente abierto">$${fmt(dfEgr)}</td><td></td><td></td></tr>`;
+    html+=`<tr class="total-row"><td style="color:var(--red)">Total Egresos</td><td style="text-align:right">$${fmt(egr.tP)}</td><td style="text-align:right">$${fmt(egr.tR)}</td><td style="text-align:right;color:var(--green)" title="Pendiente abierto">$${fmt(dfEgr)}</td><td></td></tr>`;
   }
   if(ing.cats.length){
-    html+='<tr style="background:var(--green-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Ingresos</td></tr>';
+    html+='<tr style="background:var(--green-bg)"><td colspan="5" style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Ingresos</td></tr>';
     html+=ing.html;
-    html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:${dfIng>=0?'var(--green)'  :'var(--red)'}">${(dfIng>=0?'+':'-')+'$'+fmt(Math.abs(dfIng))}</td><td></td><td></td></tr>`;
+    html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:${dfIng>=0?'var(--green)'  :'var(--red)'}">${(dfIng>=0?'+':'-')+'$'+fmt(Math.abs(dfIng))}</td><td></td></tr>`;
   }
   const balReal=ing.tR-egr.tR;
   const balPpto=ing.tP-egr.tP;
-  html+=`<tr style="background:var(--border-light)"><td colspan="6" style="padding:3px"></td></tr>
+  html+=`<tr style="background:var(--border-light)"><td colspan="5" style="padding:3px"></td></tr>
     <tr class="total-row" style="font-size:13px">
       <td>Balance neto</td>
       <td style="text-align:right;color:${balPpto>=0?'var(--green)'  :'var(--red)'}">${balPpto>=0?'+':'-'}$${fmt(Math.abs(balPpto))}</td>
       <td style="text-align:right;color:${balReal>=0?'var(--green)'  :'var(--red)'}">${balReal>=0?'+':'-'}$${fmt(Math.abs(balReal))}</td>
-      <td></td><td></td><td></td></tr>`;
+      <td></td><td></td></tr>`;
 
   document.getElementById('pptoBody').innerHTML=html;
   restorePptoExpanded();
@@ -2214,7 +2224,7 @@ function renderAhorros(){
         <button class="btn-sm" onclick="delAhorro(${a.id})">✕</button>
       </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--text-3)">Sin movimientos</td></tr>';
+  }).join('')||'<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-3)">Sin movimientos</td></tr>';
   makeDraggable('ahorroHist', ahorros, save, renderAhorros);
 }
 function editSaldoPrevio(inst){
@@ -2369,7 +2379,8 @@ function calcSaldoCC(){
   // Ppto restante a nivel SUBCATEGORÍA (excluye subcategorías cerradas)
   let pptoRestante=0;
   Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([sk,sp])=>{
-    if(_cerradas[sk])return; // subcategoría cerrada
+    const _catC=sk.split('|')[0];
+    if(_cerradas[sk]||_cerradas['CAT|'+_catC])return; // subcat o categoría cerrada
     const diff=sp-(gastoPorSub[sk]||0);
     if(diff>0)pptoRestante+=diff;
   });
@@ -2396,10 +2407,10 @@ function calcSaldoCC(){
   }
   if(el('ccExtrasVal')){
     el('ccExtrasVal').textContent='$'+fmt(gastosExtra);
-    el('ccExtrasVal').style.color=gastosExtra>0?'var(--red)':'var(--text-3)';
+    el('ccExtrasVal').style.color=gastosExtra>0?'var(--orange)':'var(--text-3)';
   }
   if(el('ccExtrasBox')){
-    el('ccExtrasBox').style.borderColor=gastosExtra>0?'var(--red)':'var(--border)';
+    el('ccExtrasBox').style.borderColor=gastosExtra>0?'var(--orange)':'var(--border)';
   }
   if(el('ccDisponible')){
     el('ccDisponible').style.background=disponible>=0?'var(--green-bg)':'var(--red-bg)';
