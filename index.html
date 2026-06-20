@@ -912,6 +912,8 @@ async function cargarDesdeGDrive(){
         const _cc=leerSaldoCC();
         if(_cc>0){saldoCC=_cc;const el=document.getElementById('saldoCC');if(el){el.value=fmt(_cc);el.dataset.raw=String(_cc);}}
         calcSaldoCC();
+        try{renderDashboard();}catch(e){}
+        try{renderMesSaldoCC();}catch(e){}
       }
     }else{setSyncStatus('err','Error Drive');}
   }catch(e){
@@ -2347,13 +2349,18 @@ function guardarSaldoCC(){
   // Save to localStorage AND cookie (cookie survives more scenarios)
   localStorage.setItem('fc_cc',String(saldoCC));
   document.cookie='fc_cc='+saldoCC+';max-age=31536000;path=/';
+  // Persist to Drive (save también guarda saldoCC en el JSON)
+  save();
   // Update display
   const el=document.getElementById('saldoCC');
   if(el){el.value=fmt(saldoCC);el.dataset.raw=String(saldoCC);}
+  // Recalcular y refrescar TODOS los módulos que muestran el disponible
   calcSaldoCC();
+  try{renderDashboard();}catch(e){}
+  try{renderMesSaldoCC();}catch(e){}
   // Visual feedback
   const btn=document.getElementById('ccGuardarBtn');
-  if(btn){const orig=btn.textContent;btn.textContent='✓';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';setTimeout(()=>{btn.textContent=orig;btn.style.borderColor='';btn.style.color='';},1500);}
+  if(btn){const orig=btn.textContent;btn.textContent='✓ Guardado';btn.style.borderColor='var(--green)';btn.style.color='var(--green)';setTimeout(()=>{btn.textContent=orig;btn.style.borderColor='';btn.style.color='';},1500);}
 }
 function leerSaldoCC(){
   // Try localStorage first, then cookie as fallback
