@@ -525,6 +525,12 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       </div>
     </div>
   </div>
+  <!-- Zona de datos: formatear/reiniciar -->
+  <div class="card" style="margin-top:14px;border-color:var(--red)">
+    <div class="card-title" style="color:var(--red)">Zona de peligro</div>
+    <p style="font-size:12px;color:var(--text-2);margin:0 0 10px">Borra TODOS los datos (movimientos, ahorros, presupuestos, tarjetas, saldos) y deja la app como recién instalada. Esta acción no se puede deshacer.</p>
+    <button onclick="formatearDatos()" style="font-size:12px;padding:8px 14px;border:1px solid var(--red);border-radius:var(--radius-sm);background:transparent;color:var(--red);cursor:pointer;font-family:inherit;font-weight:600">🗑️ Formatear todos los datos</button>
+  </div>
 </div>
 
 <!-- AHORROS -->
@@ -2397,6 +2403,30 @@ function makeDraggable(tbodyId, arr, saveFunc, renderFunc){
 
 
 
+async function formatearDatos(){
+  // Doble confirmación
+  if(!confirm('⚠️ ¿Seguro que quieres BORRAR TODOS los datos?\n\nSe eliminarán: movimientos, ahorros, presupuestos, tarjetas de crédito, saldos y partidas cerradas.\n\nEsta acción NO se puede deshacer.'))return;
+  const txt=prompt('Para confirmar, escribe la palabra:  BORRAR');
+  if(txt!=='BORRAR'){alert('Cancelado. No se borró nada.');return;}
+  // Vaciar variables en memoria
+  datos=[];ahorros=[];presupuesto={};pagosTC=[];saldosIniciales={};saldoCC=0;partidasCerradas={};
+  // Borrar localStorage
+  ['fc_d','fc_a','fc_p','fc_tc','fc_si','fc_cc','fc_pc','fc_migrado_corte25'].forEach(k=>localStorage.removeItem(k));
+  // Borrar cookie del saldo
+  document.cookie='fc_cc=;max-age=0;path=/';
+  // Limpiar input de saldo CC
+  const sel=document.getElementById('saldoCC');if(sel){sel.value='';sel.dataset.raw='';}
+  // Sobrescribir el archivo de Drive con datos vacíos (si hay conexión)
+  try{await guardarEnGDrive();}catch(e){}
+  // Refrescar toda la interfaz
+  try{refreshAll();}catch(e){}
+  try{calcSaldoCC();}catch(e){}
+  try{renderDashboard();}catch(e){}
+  try{renderMes();}catch(e){}
+  try{renderAhorros();}catch(e){}
+  try{renderHist();renderTC();renderAcum();}catch(e){}
+  alert('✓ Datos formateados. La app quedó como recién instalada.');
+}
 function guardarSaldoCC(){
   saldoCC=getRaw('saldoCC');
   if(!saldoCC){alert('Ingresa un monto válido');return;}
