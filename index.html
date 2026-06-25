@@ -735,6 +735,41 @@ function parseLocalDate(str){
   const [y,m,d]=str.split('-').map(Number);
   return new Date(y,m-1,d);
 }
+
+// ═══ CORTE FINANCIERO DÍA 25 ═══
+// El período va del 25 de un mes al 24 del siguiente.
+// Se etiqueta con el mes donde caen la mayoría de los días (mes siguiente si día>=25).
+const DIA_CORTE=25;
+function fechaToPeriodo(d){
+  // d: objeto Date. Devuelve {mesIdx, año, mes}
+  let m=d.getMonth(), y=d.getFullYear();
+  if(d.getDate()>=DIA_CORTE){
+    m+=1;
+    if(m>11){m=0;y+=1;}
+  }
+  return {mesIdx:m, año:y, mes:MESES[m]};
+}
+function periodoActual(){
+  return fechaToPeriodo(new Date());
+}
+function rangoPeriodo(mesIdx,año){
+  // Devuelve {inicio:Date, fin:Date} del período etiquetado como (mesIdx,año)
+  // Inicio = 25 del mes anterior; Fin = 24 de este mes
+  let mi=mesIdx-1, yi=año;
+  if(mi<0){mi=11;yi-=1;}
+  const inicio=new Date(yi,mi,DIA_CORTE);
+  const fin=new Date(año,mesIdx,DIA_CORTE-1);
+  return {inicio,fin};
+}
+function diasRestantesPeriodo(){
+  // Días hasta el día 24 del período actual (el corte)
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const p=periodoActual();
+  const {fin}=rangoPeriodo(p.mesIdx,p.año);
+  fin.setHours(0,0,0,0);
+  const diff=Math.round((fin-hoy)/(1000*60*60*24));
+  return Math.max(0,diff);
+}
 const fmtInput=el=>{
   if(!el)return;
   const raw=el.value.replace(/[^0-9]/g,'');
@@ -902,7 +937,9 @@ async function cargarDesdeGDrive(){
         saldosIniciales=j.saldosIniciales||{};
         if(j.partidasCerradas)partidasCerradas=j.partidasCerradas;
         if(j.saldoCC&&j.saldoCC>0){saldoCC=j.saldoCC;localStorage.setItem('fc_cc',String(saldoCC));document.cookie='fc_cc='+saldoCC+';max-age=31536000;path=/';}
+        const _camb=migrarCorte25(); // re-agrupar por corte día 25
         saveLocal(); // actualizar local con datos de Drive
+        if(_camb>0){try{await guardarEnGDrive();}catch(e){}}
       } else {
         // Local tiene más datos — subir local a Drive
         await guardarEnGDrive();
@@ -970,6 +1007,23 @@ function loadLocal(){
     const scc=localStorage.getItem('fc_cc');if(scc!==null)saldoCC=parseFloat(scc)||0;
     const pc=localStorage.getItem('fc_pc');if(pc)partidasCerradas=JSON.parse(pc);
   }catch(e){}
+  migrarCorte25();
+}
+// Migración: re-deriva mes/año de cada movimiento según corte día 25.
+// Idempotente (se basa en la fecha inmutable), seguro ejecutarla siempre.
+function migrarCorte25(){
+  let cambios=0;
+  datos.forEach(t=>{
+    if(!t.fecha)return;
+    const d=parseLocalDate(t.fecha);
+    if(isNaN(d.getTime()))return;
+    const per=fechaToPeriodo(d);
+    if(t.mes!==per.mes||t.año!==per.año){
+      t.mes=per.mes;t.año=per.año;cambios++;
+    }
+  });
+  if(cambios>0){try{saveLocal();}catch(e){}}
+  return cambios;
 }
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────────────────────
@@ -998,15 +1052,14 @@ function selHTab(tab,el){
 
 // ─── FORM ─────────────────────────────────────────────────────────────────────
 function renderDashboard(){
-  const hoy=new Date();
-  const mes=MESES[hoy.getMonth()];
-  const ano=hoy.getFullYear();
-  const diasMes=new Date(ano,hoy.getMonth()+1,0).getDate();
-  const diasRest=diasMes-hoy.getDate();
+  const _per=periodoActual();
+  const mes=_per.mes;
+  const ano=_per.año;
+  const diasRest=diasRestantesPeriodo();
   const lbl=document.getElementById('dashMesLabel');
   if(lbl)lbl.textContent=mes+' '+ano;
   const dias=document.getElementById('dashDias');
-  if(dias)dias.textContent=diasRest===0?'Último día del mes':`${diasRest} días restantes`;
+  if(dias)dias.textContent=diasRest===0?'Último día del período (corte día 24)':`${diasRest} días restantes (corte 24)`;
   const mesD=datos.filter(d=>d.mes===mes&&d.año===ano);
   const ing=mesD.filter(d=>d.tipo==='Ingresos').reduce((s,d)=>s+d.monto,0);
   const egr=mesD.filter(d=>d.tipo==='Egresos').reduce((s,d)=>s+d.monto,0);
@@ -1109,7 +1162,7 @@ function guardar(){
   const cuotaActual=sub==='Cuotas-TC'?parseInt(document.getElementById('cuotaActual').value)||null:null;
   const cuotaTotal=sub==='Cuotas-TC'?parseInt(document.getElementById('cuotaTotal').value)||null:null;
   datos.push({
-    id:Date.now(),año:d.getFullYear(),mes:MESES[d.getMonth()],tipo,fecha:fv,categoria:cat,subcategoria:sub,monto,
+    id:Date.now(),año:fechaToPeriodo(d).año,mes:fechaToPeriodo(d).mes,tipo,fecha:fv,categoria:cat,subcategoria:sub,monto,
     gastoCon,tipoPago:tipo==='Ingresos'?'N/A':(gastoCon==='Cuenta Corriente'?'Pago Inmediato':'Pago Futuro'),
     cuotaActual,cuotaTotal,comentario:document.getElementById('comentario').value
   });
@@ -1119,8 +1172,9 @@ function guardar(){
   if(cuotaActual!==null){document.getElementById('cuotaActual').value='';document.getElementById('cuotaTotal').value='';}
   // Check if this egreso pushed any category over budget
   if(tipo==='Egresos'){
-    const mes=MESES[parseLocalDate(fv).getMonth()];
-    const ano=parseLocalDate(fv).getFullYear();
+    const _per=fechaToPeriodo(parseLocalDate(fv));
+    const mes=_per.mes;
+    const ano=_per.año;
     const key=pptoKey(ano,mes);
     const pp=presupuesto[key]||{};
     const ppCat={};
@@ -1236,7 +1290,7 @@ function getTCPendiente(tarjeta, mesFilter=null){
   const gastos=datos.filter(d=>d.gastoCon===tarjeta&&d.tipo==='Egresos'&&(!mesFilter||d.mes===mesFilter));
   const totalGastos=gastos.reduce((s,d)=>s+d.monto,0);
   // Pagos registrados de esa TC
-  const pagos=pagosTC.filter(p=>p.tarjeta===tarjeta&&(!mesFilter||MESES[new Date(p.fecha).getMonth()]===mesFilter));
+  const pagos=pagosTC.filter(p=>p.tarjeta===tarjeta&&(!mesFilter||fechaToPeriodo(new Date(p.fecha)).mes===mesFilter));
   const totalPagos=pagos.reduce((s,p)=>s+p.monto,0);
   return{gastos:totalGastos,pagos:totalPagos,pendiente:Math.max(0,totalGastos-totalPagos)};
 }
@@ -1343,9 +1397,9 @@ function renderMesSaldoCC(){
   if(!card||!cont)return;
   if(!scc){card.style.display='none';return;}
   card.style.display='block';
-  const hoy=new Date();
-  const mesA=MESES[hoy.getMonth()];
-  const anoA=hoy.getFullYear();
+  const _perA=periodoActual();
+  const mesA=_perA.mes;
+  const anoA=_perA.año;
   const tc1=getTCPendiente('TC1').pendiente;
   const tc2=getTCPendiente('TC2').pendiente;
   const tcTotal=tc1+tc2;
@@ -2036,8 +2090,8 @@ function saveDato(id,tipo){
   datos[idx]={
     ...datos[idx],
     fecha:fechaVal,
-    año:d.getFullYear(),
-    mes:MESES[d.getMonth()],
+    año:fechaToPeriodo(d).año,
+    mes:fechaToPeriodo(d).mes,
     categoria:cat,
     subcategoria:sub,
     monto,
@@ -2373,9 +2427,9 @@ function leerSaldoCC(){
 }
 function calcSaldoCC(){
   const scc=getRaw('saldoCC')||saldoCC;
-  const hoy=new Date();
-  const mesActual=MESES[hoy.getMonth()];
-  const anoActual=hoy.getFullYear();
+  const _perCC=periodoActual();
+  const mesActual=_perCC.mes;
+  const anoActual=_perCC.año;
   // TC pendiente
   const tc1=getTCPendiente('TC1').pendiente;
   const tc2=getTCPendiente('TC2').pendiente;
