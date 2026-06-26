@@ -699,7 +699,7 @@ if(window.ChartDataLabels)Chart.register(ChartDataLabels);
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 // Global period state — shared across all tabs
 let G_ANO=new Date().getFullYear();
-let G_MES=new Date().getMonth(); // 0-indexed
+let G_MES=new Date().getMonth(); // 0-indexed (se ajusta al período en init)
 const CATS={
   Egresos:{
     'Vivienda':['Arriendo','Agua','Luz','Gas','Gastos Comunes','Estacionamiento','Internet','Limpieza','Supermercado','Feria','Mantención','Otros Vivienda'],
@@ -1058,14 +1058,17 @@ function selHTab(tab,el){
 
 // ─── FORM ─────────────────────────────────────────────────────────────────────
 function renderDashboard(){
-  const _per=periodoActual();
-  const mes=_per.mes;
-  const ano=_per.año;
-  const diasRest=diasRestantesPeriodo();
+  const mes=MESES[G_MES];
+  const ano=G_ANO;
+  const _perHoy=periodoActual();
+  const esActual=(G_MES===_perHoy.mesIdx&&G_ANO===_perHoy.año);
   const lbl=document.getElementById('dashMesLabel');
   if(lbl)lbl.textContent=mes+' '+ano;
   const dias=document.getElementById('dashDias');
-  if(dias)dias.textContent=diasRest===0?'Último día del período (corte día 24)':`${diasRest} días restantes (corte 24)`;
+  if(dias){
+    if(esActual){const dr=diasRestantesPeriodo();dias.textContent=dr===0?'Último día del período (corte 24)':`${dr} días restantes (corte 24)`;}
+    else{dias.textContent='Período seleccionado';}
+  }
   const mesD=datos.filter(d=>d.mes===mes&&d.año===ano);
   const ing=mesD.filter(d=>d.tipo==='Ingresos').reduce((s,d)=>s+d.monto,0);
   const egr=mesD.filter(d=>d.tipo==='Egresos').reduce((s,d)=>s+d.monto,0);
@@ -1403,9 +1406,8 @@ function renderMesSaldoCC(){
   if(!card||!cont)return;
   if(!scc){card.style.display='none';return;}
   card.style.display='block';
-  const _perA=periodoActual();
-  const mesA=_perA.mes;
-  const anoA=_perA.año;
+  const mesA=MESES[G_MES];
+  const anoA=G_ANO;
   const tc1=getTCPendiente('TC1').pendiente;
   const tc2=getTCPendiente('TC2').pendiente;
   const tcTotal=tc1+tc2;
@@ -2457,9 +2459,8 @@ function leerSaldoCC(){
 }
 function calcSaldoCC(){
   const scc=getRaw('saldoCC')||saldoCC;
-  const _perCC=periodoActual();
-  const mesActual=_perCC.mes;
-  const anoActual=_perCC.año;
+  const mesActual=MESES[G_MES];
+  const anoActual=G_ANO;
   // TC pendiente
   const tc1=getTCPendiente('TC1').pendiente;
   const tc2=getTCPendiente('TC2').pendiente;
@@ -2529,7 +2530,43 @@ function calcSaldoCC(){
   }
 }
 
+function preguntarMesVer(){
+  const per=periodoActual();
+  const anoVista=per.año; // año actual (del período)
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.style.display='flex';
+  overlay.id='mesPickerOverlay';
+  const botones=MESES.map((m,i)=>{
+    const activo=(i===per.mesIdx);
+    return `<button onclick="aplicarMesVista(${i},${anoVista})" style="padding:10px 6px;border:1px solid ${activo?'var(--green)':'var(--border)'};border-radius:var(--radius-sm);background:${activo?'var(--green-bg)':'var(--surface)'};color:${activo?'var(--green)':'var(--text)'};cursor:pointer;font-family:inherit;font-size:13px;font-weight:${activo?'600':'400'}">${m.slice(0,3)}${activo?' •':''}</button>`;
+  }).join('');
+  overlay.innerHTML=`<div class="modal" style="max-width:420px">
+    <h2>¿Qué mes deseas ver?</h2>
+    <p style="font-size:13px;color:var(--text-2);margin-bottom:14px">Año ${anoVista}. La selección se aplicará a todos los módulos. El mes actual (${per.mes}) está marcado con •</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${botones}</div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+function aplicarMesVista(mesIdx,ano){
+  G_MES=mesIdx;
+  G_ANO=ano;
+  syncAllPeriodSelectors();
+  // Refrescar todos los módulos
+  try{refreshAll();}catch(e){}
+  try{renderDashboard();}catch(e){}
+  try{calcSaldoCC();}catch(e){}
+  try{buildMesSelectors();syncAllPeriodSelectors();renderMes();}catch(e){}
+  try{buildPptoSelectors();syncAllPeriodSelectors();renderPpto();}catch(e){}
+  // Cerrar modal
+  const ov=document.getElementById('mesPickerOverlay');
+  if(ov)ov.remove();
+}
 async function init(){
+  // Inicializar período al ciclo actual (corte día 25)
+  const _perInit=periodoActual();
+  G_MES=_perInit.mesIdx;
+  G_ANO=_perInit.año;
   // Datos se cargan desde localStorage — no borrar
   const today=new Date().toISOString().split('T')[0];
   // fecha left blank for user to select
@@ -2553,6 +2590,8 @@ async function init(){
     setSyncStatus('off','⚡ Sin sync');
     // App ya está funcionando con datos locales
   }
+  // Preguntar qué mes ver (se aplica a todos los módulos)
+  preguntarMesVer();
 }
 init();
 </script>
