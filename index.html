@@ -101,6 +101,9 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .dash-group .metrics{margin:0}
 .dash-group-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border-light)}
 .dash-group .metric{background:var(--bg);border-color:var(--border-light)}
+.grp-body{overflow:hidden;transition:max-height .25s ease,opacity .2s ease;max-height:2000px;opacity:1}
+.grp-body.collapsed{max-height:0;opacity:0;margin:0!important}
+.grp-chevron.collapsed{transform:rotate(-90deg)}
 .eye-btn:hover{border-color:var(--text-3);color:var(--text)}
 @media(max-width:600px){
   #mesChartsGrid{grid-template-columns:1fr!important;gap:8px}
@@ -221,29 +224,39 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
   <div id="ppto-alert" style="display:none;background:#fff3cd;border:1px solid #d4860a;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#7a4f00"></div>
   <!-- Grupo 1: Resumen del mes -->
   <div class="dash-group">
-    <div class="dash-group-head">
-      <div style="font-size:14px;font-weight:600;color:var(--text)" id="dashMesLabel">—</div>
+    <div class="dash-group-head" onclick="toggleGroupCollapse('grpResumen',this)" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grp-chevron" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span style="font-size:14px;font-weight:600;color:var(--text)" id="dashMesLabel">—</span>
+      </div>
       <div style="display:flex;gap:12px;align-items:center">
         <div id="dashDias" style="font-size:12px;color:var(--text-3)"></div>
-        <button onclick="toggleMaskGroup('resumen',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+        <button onclick="event.stopPropagation();toggleMaskGroup('resumen',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
       </div>
     </div>
-    <div class="metrics" id="dashMetricsResumen"></div>
+    <div class="grp-body" id="grpResumen"><div class="metrics" id="dashMetricsResumen"></div></div>
   </div>
   <!-- Grupo 2: Patrimonio y mayor gasto -->
   <div class="dash-group">
-    <div class="dash-group-head">
-      <div style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Patrimonio</div>
-      <button onclick="toggleMaskGroup('patrimonio',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+    <div class="dash-group-head" onclick="toggleGroupCollapse('grpPatrimonio',this)" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grp-chevron" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Patrimonio</span>
+      </div>
+      <button onclick="event.stopPropagation();toggleMaskGroup('patrimonio',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
     </div>
-    <div class="metrics" id="dashMetricsPatrimonio"></div>
+    <div class="grp-body" id="grpPatrimonio"><div class="metrics" id="dashMetricsPatrimonio"></div></div>
   </div>
   <!-- Saldo Cuenta Corriente -->
   <div class="card" id="saldoCCCard">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div class="card-title" style="margin:0">Saldo cuenta corriente</div>
-      <button onclick="toggleMaskGroup('saldocc',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px" onclick="toggleGroupCollapse('grpSaldoCC',this)" id="saldoCCHead" >
+      <div style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <span class="grp-chevron" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span class="card-title" style="margin:0">Saldo cuenta corriente</span>
+      </div>
+      <button onclick="event.stopPropagation();toggleMaskGroup('saldocc',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
     </div>
+    <div class="grp-body" id="grpSaldoCC">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
       <input type="text" id="saldoCC" placeholder="Saldo actual en cuenta corriente..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);" style="flex:1">
       <button onclick="guardarSaldoCC()" id="ccGuardarBtn" style="padding:7px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-2);cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .2s">Guardar</button>
@@ -271,6 +284,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       <div style="font-size:10px;color:var(--text-3)">Disponible real estimado<span class="tip" tabindex="0"><span class="tip-icon">i</span><span class="tip-box">Saldo − TC pendiente − Ppto restante del mes. Estimación conservadora de lo que puedes gastar.</span></span></div>
       <div id="ccDisponibleVal" style="font-size:20px;font-weight:700;color:var(--text)">$0</div>
       <div style="font-size:10px;color:var(--text-3);margin-top:2px">= Saldo − TC − Ppto restante</div>
+    </div>
     </div>
   </div>
   <!-- Botones de acción -->
@@ -1094,6 +1108,14 @@ function maskContainer(containerId,masked){
       el.textContent=el.textContent.replace(/[0-9]/g,'x');
     }
   });
+}
+function toggleGroupCollapse(bodyId,headEl){
+  const body=document.getElementById(bodyId);
+  if(!body)return;
+  const collapsed=body.classList.toggle('collapsed');
+  // Rotate chevron in the header
+  const chevron=headEl.querySelector('.grp-chevron');
+  if(chevron)chevron.classList.toggle('collapsed',collapsed);
 }
 function toggleMaskGroup(group,btnEl){
   _maskState[group]=!_maskState[group];
