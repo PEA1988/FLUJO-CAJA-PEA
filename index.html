@@ -97,9 +97,18 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 
 .sort-arrow{font-size:10px;color:var(--text-3)}
 .eye-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:13px;cursor:pointer;color:var(--text-2);font-family:inherit;transition:all .2s}
+.dash-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.dash-group .metrics{margin:0}
+.dash-group-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border-light)}
+.dash-group .metric{background:var(--bg);border-color:var(--border-light)}
 .eye-btn:hover{border-color:var(--text-3);color:var(--text)}
 @media(max-width:600px){
   #mesChartsGrid{grid-template-columns:1fr!important;gap:8px}
+  #ahorroChartsGrid{grid-template-columns:1fr!important;gap:8px}
+  #ahorroHistTable{font-size:10px}
+  #ahorroHistTable th,#ahorroHistTable td{padding:5px 4px}
+  #traspasoTable{font-size:10px}
+  #traspasoTable th,#traspasoTable td{padding:5px 4px}
   /* Presupuesto table fits mobile without zoom */
   #pptoCompTable{font-size:9px;table-layout:fixed;width:100%}
   #pptoCompTable th,#pptoCompTable td{padding:4px 1px;overflow:hidden}
@@ -211,20 +220,24 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
   <div id="ahorro-banner" class="banner banner-info"></div>
   <div id="ppto-alert" style="display:none;background:#fff3cd;border:1px solid #d4860a;border-radius:6px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#7a4f00"></div>
   <!-- Grupo 1: Resumen del mes -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <div style="font-size:14px;font-weight:600;color:var(--text)" id="dashMesLabel">—</div>
-    <div style="display:flex;gap:12px;align-items:center">
-      <div id="dashDias" style="font-size:12px;color:var(--text-3)"></div>
-      <button onclick="toggleMaskGroup('resumen',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+  <div class="dash-group">
+    <div class="dash-group-head">
+      <div style="font-size:14px;font-weight:600;color:var(--text)" id="dashMesLabel">—</div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div id="dashDias" style="font-size:12px;color:var(--text-3)"></div>
+        <button onclick="toggleMaskGroup('resumen',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+      </div>
     </div>
+    <div class="metrics" id="dashMetricsResumen"></div>
   </div>
-  <div class="metrics" id="dashMetricsResumen"></div>
   <!-- Grupo 2: Patrimonio y mayor gasto -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px">
-    <div style="font-size:13px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Patrimonio</div>
-    <button onclick="toggleMaskGroup('patrimonio',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+  <div class="dash-group">
+    <div class="dash-group-head">
+      <div style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Patrimonio</div>
+      <button onclick="toggleMaskGroup('patrimonio',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+    </div>
+    <div class="metrics" id="dashMetricsPatrimonio"></div>
   </div>
-  <div class="metrics" id="dashMetricsPatrimonio"></div>
   <!-- Saldo Cuenta Corriente -->
   <div class="card" id="saldoCCCard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -642,15 +655,15 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     <div class="card-title">Saldo por instrumento</div>
     <div id="ahorroSaldos"></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div class="card" style="margin:0">
+  <div id="ahorroChartsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card" style="margin:0;min-width:0;overflow:hidden">
       <div class="card-title" style="font-size:12px">Distribución patrimonio</div>
       <div class="legend" id="ahorroLegend" style="font-size:10px"></div>
-      <div class="chart-wrap" style="height:160px"><canvas id="ahorroDonut" role="img" aria-label="Patrimonio">Patrimonio</canvas></div>
+      <div class="chart-wrap" style="height:160px;position:relative;width:100%"><canvas id="ahorroDonut" role="img" aria-label="Patrimonio" style="max-width:100%">Patrimonio</canvas></div>
     </div>
-    <div class="card" style="margin:0">
+    <div class="card" style="margin:0;min-width:0;overflow:hidden">
       <div class="card-title" style="font-size:12px">Evolución acumulada</div>
-      <div class="chart-wrap" style="height:160px"><canvas id="ahorroLine" role="img" aria-label="Evolución ahorros">Evolución</canvas></div>
+      <div class="chart-wrap" style="height:160px;position:relative;width:100%"><canvas id="ahorroLine" role="img" aria-label="Evolución ahorros" style="max-width:100%">Evolución</canvas></div>
     </div>
   </div>
   <div class="card" style="padding:0;overflow:hidden"><div style="overflow-x:auto">
