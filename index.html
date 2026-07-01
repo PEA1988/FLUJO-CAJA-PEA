@@ -227,7 +227,8 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     <div class="dash-group-head" onclick="toggleGroupCollapse('grpResumen',this)" style="cursor:pointer">
       <div style="display:flex;align-items:center;gap:8px">
         <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
-        <span style="font-size:14px;font-weight:600;color:var(--text)" id="dashMesLabel">—</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Balance Mensual</span>
+        <span style="font-size:12px;font-weight:500;color:var(--text-2)" id="dashMesLabel">—</span>
       </div>
       <div style="display:flex;gap:12px;align-items:center">
         <div id="dashDias" style="font-size:12px;color:var(--text-3)"></div>
@@ -252,7 +253,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px" onclick="toggleGroupCollapse('grpSaldoCC',this)" id="saldoCCHead" >
       <div style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
-        <span class="card-title" style="margin:0">Saldo cuenta corriente</span>
+        <span class="card-title" style="margin:0">Balance Mensual Proyectado</span>
       </div>
       <button onclick="event.stopPropagation();toggleMaskGroup('saldocc',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
     </div>
@@ -1134,6 +1135,63 @@ function maskContainer(containerId,masked){
     if(masked){
       el.textContent=el.textContent.replace(/[0-9]/g,'x');
     }
+  });
+}
+function maskEl(el,mask){
+  if(mask){
+    if(el.dataset.orig===undefined)el.dataset.orig=el.textContent;
+    el.textContent=el.textContent.replace(/[0-9]/g,'x');
+  }else if(el.dataset.orig!==undefined){
+    el.textContent=el.dataset.orig;delete el.dataset.orig;
+  }
+}
+function toggleMaskNode(node,btn){
+  const masked=node.dataset.masked==='1';
+  // Enmascara métricas y cualquier celda/elemento hoja con signo $
+  node.querySelectorAll('.metric-value,.maskable').forEach(el=>maskEl(el,!masked));
+  node.querySelectorAll('td,span,div').forEach(el=>{
+    if(el.children.length===0 && el.textContent.indexOf('$')>=0) maskEl(el,!masked);
+  });
+  node.dataset.masked=masked?'0':'1';
+  if(btn)btn.textContent=masked?'👁':'🙈';
+}
+function hacerColapsables(){
+  const skip=['formRegistroCard','saldoCCCard','apanel-movimiento'];
+  document.querySelectorAll('.card').forEach(card=>{
+    if(card.dataset.enh==='1')return;
+    if(skip.includes(card.id))return;
+    if(card.closest('#apanel-movimiento'))return;
+    // Localizar el header (título directo o dentro de un wrapper)
+    let header=card.querySelector(':scope > .card-title');
+    if(!header){
+      const firstDiv=card.querySelector(':scope > div');
+      if(firstDiv && firstDiv.querySelector('.card-title'))header=firstDiv;
+    }
+    if(!header)return;
+    card.dataset.enh='1';
+    // Envolver todo lo que sigue al header en un body colapsable
+    const body=document.createElement('div');
+    body.className='grp-body';
+    let n=header.nextSibling;
+    while(n){const next=n.nextSibling;body.appendChild(n);n=next;}
+    card.appendChild(body);
+    // Construir fila de encabezado con chevron + ojo
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:10px';
+    const left=document.createElement('div');
+    left.style.cssText='display:flex;align-items:center;gap:8px;flex:1;min-width:0';
+    const chev=document.createElement('span');
+    chev.className='grp-chevron';chev.textContent='▾';
+    chev.style.cssText='font-size:11px;color:var(--text-3);transition:transform .2s;flex:0 0 auto';
+    card.insertBefore(row,header);
+    left.appendChild(chev);
+    left.appendChild(header);
+    row.appendChild(left);
+    const eye=document.createElement('button');
+    eye.className='eye-btn';eye.textContent='👁';eye.title='Ocultar/mostrar montos';
+    eye.onclick=(e)=>{e.stopPropagation();toggleMaskNode(body,eye);};
+    row.appendChild(eye);
+    row.onclick=()=>{const col=body.classList.toggle('collapsed');chev.classList.toggle('collapsed',col);};
   });
 }
 function colapsarTodosLosGrupos(){
@@ -2725,6 +2783,8 @@ async function init(){
     setSyncStatus('off','⚡ Sin sync');
     // App ya está funcionando con datos locales
   }
+  // Hacer colapsables todas las secciones de los módulos
+  hacerColapsables();
   // Asegurar que todos los grupos arranquen colapsados
   colapsarTodosLosGrupos();
   // Preguntar qué mes ver (se aplica a todos los módulos)
