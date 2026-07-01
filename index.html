@@ -226,7 +226,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
   <div class="dash-group">
     <div class="dash-group-head" onclick="toggleGroupCollapse('grpResumen',this)" style="cursor:pointer">
       <div style="display:flex;align-items:center;gap:8px">
-        <span class="grp-chevron" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
         <span style="font-size:14px;font-weight:600;color:var(--text)" id="dashMesLabel">—</span>
       </div>
       <div style="display:flex;gap:12px;align-items:center">
@@ -234,29 +234,29 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
         <button onclick="event.stopPropagation();toggleMaskGroup('resumen',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
       </div>
     </div>
-    <div class="grp-body" id="grpResumen"><div class="metrics" id="dashMetricsResumen"></div></div>
+    <div class="grp-body collapsed" id="grpResumen"><div class="metrics" id="dashMetricsResumen"></div></div>
   </div>
   <!-- Grupo 2: Patrimonio y mayor gasto -->
   <div class="dash-group">
     <div class="dash-group-head" onclick="toggleGroupCollapse('grpPatrimonio',this)" style="cursor:pointer">
       <div style="display:flex;align-items:center;gap:8px">
-        <span class="grp-chevron" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
         <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Patrimonio</span>
       </div>
       <button onclick="event.stopPropagation();toggleMaskGroup('patrimonio',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
     </div>
-    <div class="grp-body" id="grpPatrimonio"><div class="metrics" id="dashMetricsPatrimonio"></div></div>
+    <div class="grp-body collapsed" id="grpPatrimonio"><div class="metrics" id="dashMetricsPatrimonio"></div></div>
   </div>
   <!-- Saldo Cuenta Corriente -->
   <div class="card" id="saldoCCCard">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px" onclick="toggleGroupCollapse('grpSaldoCC',this)" id="saldoCCHead" >
       <div style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <span class="grp-chevron" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
         <span class="card-title" style="margin:0">Saldo cuenta corriente</span>
       </div>
       <button onclick="event.stopPropagation();toggleMaskGroup('saldocc',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
     </div>
-    <div class="grp-body" id="grpSaldoCC">
+    <div class="grp-body collapsed" id="grpSaldoCC">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
       <input type="text" id="saldoCC" placeholder="Saldo actual en cuenta corriente..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);" style="flex:1">
       <button onclick="guardarSaldoCC()" id="ccGuardarBtn" style="padding:7px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-2);cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .2s">Guardar</button>
@@ -413,7 +413,16 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       <select id="mesMesSel" onchange="onMesSelChange()" style="width:100%"></select>
     </div>
   </div>
-  <div class="metrics" id="mensMetrics"></div>
+  <div class="dash-group">
+    <div class="dash-group-head" onclick="toggleGroupCollapse('grpMesMetrics',this)" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Resumen del mes</span>
+      </div>
+      <button onclick="event.stopPropagation();toggleMaskGeneric('mensMetrics',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+    </div>
+    <div class="grp-body collapsed" id="grpMesMetrics"><div class="metrics" id="mensMetrics"></div></div>
+  </div>
   <!-- Saldo cuenta corriente (resumen, mismo que Registro) -->
   <div class="card" id="mesSaldoCCCard" style="display:none">
     <div class="card-title">Saldo cuenta corriente</div>
@@ -450,7 +459,16 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       <button class="btn-secondary" onclick="anualAnoSel.value='todos';renderAnual()" style="padding:10px 14px;font-size:12px">Ver todos los años</button>
     </div>
   </div>
-  <div class="metrics" id="anualMetrics"></div>
+  <div class="dash-group">
+    <div class="dash-group-head" onclick="toggleGroupCollapse('grpAnualMetrics',this)" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Resumen anual</span>
+      </div>
+      <button onclick="event.stopPropagation();toggleMaskGeneric('anualMetrics',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+    </div>
+    <div class="grp-body collapsed" id="grpAnualMetrics"><div class="metrics" id="anualMetrics"></div></div>
+  </div>
   <!-- Totalizador acumulado -->
   <div class="metrics" id="anualAcumMetrics"></div>
   <!-- TC pendiente anual -->
@@ -664,7 +682,16 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
 
 
   <!-- Dashboard siempre visible -->
-  <div class="metrics" id="ahorroMetrics"></div>
+  <div class="dash-group">
+    <div class="dash-group-head" onclick="toggleGroupCollapse('grpAhorroMetrics',this)" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Resumen ahorros</span>
+      </div>
+      <button onclick="event.stopPropagation();toggleMaskGeneric('ahorroMetrics',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+    </div>
+    <div class="grp-body collapsed" id="grpAhorroMetrics"><div class="metrics" id="ahorroMetrics"></div></div>
+  </div>
   <div class="card">
     <div class="card-title">Saldo por instrumento</div>
     <div id="ahorroSaldos"></div>
@@ -1109,6 +1136,21 @@ function maskContainer(containerId,masked){
     }
   });
 }
+function toggleMaskGeneric(containerId,btnEl){
+  const cont=document.getElementById(containerId);
+  if(!cont)return;
+  const masked=cont.dataset.masked==='1';
+  cont.querySelectorAll('.metric-value, .maskable').forEach(el=>{
+    if(!masked){
+      if(el.dataset.orig===undefined)el.dataset.orig=el.textContent;
+      el.textContent=el.textContent.replace(/[0-9]/g,'x');
+    }else{
+      if(el.dataset.orig!==undefined){el.textContent=el.dataset.orig;delete el.dataset.orig;}
+    }
+  });
+  cont.dataset.masked=masked?'0':'1';
+  if(btnEl)btnEl.textContent=masked?'👁':'🙈';
+}
 function toggleGroupCollapse(bodyId,headEl){
   const body=document.getElementById(bodyId);
   if(!body)return;
@@ -1186,8 +1228,16 @@ function abrirFormRegistro(tipo){
   document.getElementById('monto').value='';
   document.getElementById('monto').dataset.raw='0';
   document.getElementById('comentario').value='';
-  // Focus monto
-  setTimeout(()=>document.getElementById('monto').focus(),100);
+  // Llevar al formulario y enfocar el PRIMER campo en orden
+  setTimeout(()=>{
+    document.getElementById('formRegistroCard').scrollIntoView({behavior:'smooth',block:'start'});
+    // Egresos: primer campo = "Pagado con". Ingresos: primer campo = Fecha
+    if(tipo==='Egresos'){
+      const g=document.getElementById('gastoCon');if(g)g.focus();
+    }else{
+      const f=document.getElementById('fechaIngreso');if(f)f.focus();
+    }
+  },120);
 }
 function cerrarFormRegistro(){
   document.getElementById('formRegistroCard').style.display='none';
