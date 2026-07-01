@@ -101,8 +101,8 @@ select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .dash-group .metrics{margin:0}
 .dash-group-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border-light)}
 .dash-group .metric{background:var(--bg);border-color:var(--border-light)}
-.grp-body{overflow:hidden;transition:max-height .25s ease,opacity .2s ease;max-height:2000px;opacity:1}
-.grp-body.collapsed{max-height:0;opacity:0;margin:0!important}
+.grp-body{overflow:hidden;transition:opacity .2s ease;opacity:1}
+.grp-body.collapsed{display:none!important;opacity:0}
 .grp-chevron.collapsed{transform:rotate(-90deg)}
 .eye-btn:hover{border-color:var(--text-3);color:var(--text)}
 @media(max-width:600px){
@@ -471,7 +471,16 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     <div class="grp-body collapsed" id="grpAnualMetrics"><div class="metrics" id="anualMetrics"></div></div>
   </div>
   <!-- Totalizador acumulado -->
-  <div class="metrics" id="anualAcumMetrics"></div>
+  <div class="dash-group">
+    <div class="dash-group-head" onclick="toggleGroupCollapse('grpAnualAcum',this)" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Acumulado total a la fecha</span>
+      </div>
+      <button onclick="event.stopPropagation();toggleMaskGeneric('anualAcumMetrics',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+    </div>
+    <div class="grp-body collapsed" id="grpAnualAcum"><div class="metrics" id="anualAcumMetrics"></div></div>
+  </div>
   <!-- TC pendiente anual -->
   <div id="tcResumenAnual"></div>
   <div class="card">
@@ -1113,7 +1122,8 @@ function sw(sec,el){
   if(sec==='presupuesto'){buildPptoSelectors();renderPpto();}
   if(sec==='ahorros')renderAhorros();
   if(sec==='historico'){updFiltros();renderAcum();renderHist();renderTC();}
-
+  // Asegurar que las secciones del módulo sean colapsables
+  setTimeout(hacerColapsables,50);
 }
 function selHTab(tab,el){
   activeHTab=tab;
@@ -1195,7 +1205,7 @@ function hacerColapsables(){
   });
 }
 function colapsarTodosLosGrupos(){
-  ['grpResumen','grpPatrimonio','grpSaldoCC','grpMesMetrics','grpAnualMetrics','grpAhorroMetrics'].forEach(id=>{
+  ['grpResumen','grpPatrimonio','grpSaldoCC','grpMesMetrics','grpAnualMetrics','grpAnualAcum','grpAhorroMetrics'].forEach(id=>{
     const body=document.getElementById(id);
     if(body)body.classList.add('collapsed');
   });
