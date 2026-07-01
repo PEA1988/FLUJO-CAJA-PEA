@@ -1984,12 +1984,10 @@ function renderPptoComp(mes,ano){
       const st=pct===null?'<span style="color:var(--text-3);font-size:10px">sin ppto</span>':
         isIng?(pct>=100?`<span class="status-ok">${pct}%</span>`:`<span class="status-over">${pct}%</span>`):
         (pct>100?`<span class="status-over">+${pct-100}%</span>`:pct>85?`<span class="status-warn">${pct}%</span>`:`<span class="status-ok">${pct}%</span>`);
-      // Diferencia = suma de saldos pendientes ABIERTOS (egresos). Cerrados o sobre-ppto = $0
+      // Diferencia = suma de saldos pendientes ABIERTOS. Cerrados o sobre-ppto = $0
+      // (aplica igual para ingresos y egresos: solo cuenta lo presupuestado aún no recibido/gastado)
       let dfCat;
-      if(isIng){
-        dfCat=p>0?p-r:null;
-      }else{
-        // Sumar solo subcategorías abiertas con saldo positivo
+      {
         let pendCat=0;
         const _catCerrada=_cerr['CAT|'+cat];
         (cats[cat]||[]).forEach(sub=>{
@@ -2004,8 +2002,8 @@ function renderPptoComp(mes,ano){
         tPend+=pendCat;
       }
       const df=dfCat;
-      const dfColor=isIng?(df!==null&&df<=0?'var(--green)'  :'var(--red)'):'var(--green)';
-      const dfStr=df===null?'—':(isIng?((df<=0?'+':'-')+'$'+fmt(Math.abs(df))):'$'+fmt(df));
+      const dfColor=(df>0)?'var(--green)':'var(--text-3)';
+      const dfStr='$'+fmt(df);
       const catCls='sr_'+tipo+'_'+cat.replace(/[^a-z]/gi,'_');
       const catCerrada=_cerr['CAT|'+cat];
       const btnCatCerrar=`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','CAT|${cat.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${catCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${catCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 6px;white-space:nowrap;margin-left:6px">${catCerrada?'✓':'cerrar'}</span>`;
@@ -2050,7 +2048,7 @@ function renderPptoComp(mes,ano){
           <td style="text-align:center;vertical-align:middle">${btnCerrar}</td>
           <td style="text-align:right;font-size:11px;color:var(--text-3)">${sp?'$'+fmt(sp):'—'}</td>
           <td style="text-align:right;font-size:11px">$${fmt(sr)}</td>
-          <td style="text-align:right;font-size:11px;color:${(!isIng&&subDifShown>0)?'var(--green)':'var(--text-3)'}">${(!isIng)?'$'+fmt(subDifShown):(sdf!==null?(sdf>=0?'+':'-')+'$'+fmt(Math.abs(sdf)):'—')}</td>
+          <td style="text-align:right;font-size:11px;color:${(subDifShown>0)?'var(--green)':'var(--text-3)'}">$${fmt(subDifShown)}</td>
           <td style="text-align:right">${sst}</td></tr>`;
       });
     });
@@ -2060,7 +2058,7 @@ function renderPptoComp(mes,ano){
   const egr=renderSeccion('Egresos',CATS.Egresos,'',CCOLORS);
   const ing=renderSeccion('Ingresos',CATS.Ingresos,'ING|',["#1a7a5e","#2a9a6e","#3aad7e","#4abf8e","#5ad2a0"]);
   const dfEgr=egr.tPend; // suma de pendientes abiertos
-  const dfIng=ing.tP-ing.tR; // presupuesto - real (consistente con nivel categoría)
+  const dfIng=ing.tPend; // suma de pendientes abiertos (igual que egresos)
   let html='';
 
   if(egr.cats.length){
@@ -2071,7 +2069,7 @@ function renderPptoComp(mes,ano){
   if(ing.cats.length){
     html+='<tr style="background:var(--green-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Ingresos</td></tr>';
     html+=ing.html;
-    html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td></td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:${dfIng<=0?'var(--green)':'var(--red)'}">${(dfIng<=0?'+':'-')+'$'+fmt(Math.abs(dfIng))}</td><td></td></tr>`;
+    html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td></td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:var(--green)" title="Pendiente abierto">$${fmt(dfIng)}</td><td></td></tr>`;
   }
   const balReal=ing.tR-egr.tR;
   const balPpto=ing.tP-egr.tP;
