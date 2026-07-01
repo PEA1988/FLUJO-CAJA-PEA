@@ -1136,6 +1136,13 @@ function maskContainer(containerId,masked){
     }
   });
 }
+function colapsarTodosLosGrupos(){
+  ['grpResumen','grpPatrimonio','grpSaldoCC','grpMesMetrics','grpAnualMetrics','grpAhorroMetrics'].forEach(id=>{
+    const body=document.getElementById(id);
+    if(body)body.classList.add('collapsed');
+  });
+  document.querySelectorAll('.grp-chevron').forEach(ch=>ch.classList.add('collapsed'));
+}
 function toggleMaskGeneric(containerId,btnEl){
   const cont=document.getElementById(containerId);
   if(!cont)return;
@@ -2704,6 +2711,7 @@ async function init(){
   // 1. Cargar datos locales SIEMPRE — app funciona sin internet
   loadLocal();
   refreshAll();
+  colapsarTodosLosGrupos();
   // Restore saldoCC from localStorage or cookie
   saldoCC=leerSaldoCC();
   if(saldoCC>0){
@@ -2717,6 +2725,8 @@ async function init(){
     setSyncStatus('off','⚡ Sin sync');
     // App ya está funcionando con datos locales
   }
+  // Asegurar que todos los grupos arranquen colapsados
+  colapsarTodosLosGrupos();
   // Preguntar qué mes ver (se aplica a todos los módulos)
   preguntarMesVer();
 }
