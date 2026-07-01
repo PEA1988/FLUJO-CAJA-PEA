@@ -1278,6 +1278,43 @@ function renderDashboard(){
   if(_maskState.resumen)maskContainer('dashMetricsResumen',true);
   if(_maskState.patrimonio)maskContainer('dashMetricsPatrimonio',true);
 }
+function _focusEl(id){const el=document.getElementById(id);if(el){el.focus();if(el.select&&el.type!=='date')try{el.select();}catch(e){}}}
+function _focusGuardar(){const b=document.querySelector('#formRegistroCard .btn-primary');if(b)b.focus();}
+let _formSeqReady=false;
+function setupFormSequence(){
+  if(_formSeqReady)return;_formSeqReady=true;
+  const tipoDe=()=>document.getElementById('tipo').value;
+  // gastoCon (egreso): → fecha
+  const g=document.getElementById('gastoCon');
+  if(g)g.addEventListener('change',()=>_focusEl('fecha'));
+  // fecha (egreso): → categoria
+  const f=document.getElementById('fecha');
+  if(f)f.addEventListener('change',()=>_focusEl('categoria'));
+  // fechaIngreso (ingreso): → categoria
+  const fi=document.getElementById('fechaIngreso');
+  if(fi)fi.addEventListener('change',()=>_focusEl('categoria'));
+  // categoria: (updSub corre por inline) → subcategoria
+  const cat=document.getElementById('categoria');
+  if(cat)cat.addEventListener('change',()=>setTimeout(()=>_focusEl('subcategoria'),30));
+  // subcategoria: → si hay cuotas visibles, cuotaActual; si no, monto
+  const sub=document.getElementById('subcategoria');
+  if(sub)sub.addEventListener('change',()=>setTimeout(()=>{
+    const cr=document.getElementById('cuotaRow');
+    if(cr&&cr.style.display!=='none')_focusEl('cuotaActual');
+    else _focusEl('monto');
+  },30));
+  // cuotaActual → cuotaTotal → monto
+  const ca=document.getElementById('cuotaActual');
+  if(ca)ca.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();_focusEl('cuotaTotal');}});
+  const ct=document.getElementById('cuotaTotal');
+  if(ct)ct.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();_focusEl('monto');}});
+  // monto → comentario
+  const mo=document.getElementById('monto');
+  if(mo)mo.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();_focusEl('comentario');}});
+  // comentario → botón Guardar
+  const co=document.getElementById('comentario');
+  if(co)co.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();_focusGuardar();}});
+}
 function abrirFormRegistro(tipo){
   // Set tipo
   document.getElementById('tipo').value=tipo;
@@ -1293,6 +1330,7 @@ function abrirFormRegistro(tipo){
   document.getElementById('monto').value='';
   document.getElementById('monto').dataset.raw='0';
   document.getElementById('comentario').value='';
+  setupFormSequence();
   // Llevar al formulario y enfocar el PRIMER campo en orden
   setTimeout(()=>{
     document.getElementById('formRegistroCard').scrollIntoView({behavior:'smooth',block:'start'});
