@@ -2060,7 +2060,7 @@ function renderPptoComp(mes,ano){
   const egr=renderSeccion('Egresos',CATS.Egresos,'',CCOLORS);
   const ing=renderSeccion('Ingresos',CATS.Ingresos,'ING|',["#1a7a5e","#2a9a6e","#3aad7e","#4abf8e","#5ad2a0"]);
   const dfEgr=egr.tPend; // suma de pendientes abiertos
-  const dfIng=ing.tR-ing.tP;
+  const dfIng=ing.tP-ing.tR; // presupuesto - real (consistente con nivel categoría)
   let html='';
 
   if(egr.cats.length){
@@ -2071,7 +2071,7 @@ function renderPptoComp(mes,ano){
   if(ing.cats.length){
     html+='<tr style="background:var(--green-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Ingresos</td></tr>';
     html+=ing.html;
-    html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td></td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:${dfIng>=0?'var(--green)'  :'var(--red)'}">${(dfIng>=0?'+':'-')+'$'+fmt(Math.abs(dfIng))}</td><td></td></tr>`;
+    html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td></td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:${dfIng<=0?'var(--green)':'var(--red)'}">${(dfIng<=0?'+':'-')+'$'+fmt(Math.abs(dfIng))}</td><td></td></tr>`;
   }
   const balReal=ing.tR-egr.tR;
   const balPpto=ing.tP-egr.tP;
