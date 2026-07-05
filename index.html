@@ -1048,7 +1048,7 @@ async function cargarDesdeGDrive(){
         await guardarEnGDrive();
         setSyncStatus('ok','✓ Drive (local restaurado)');
         refreshAll();
-        try{hacerColapsables();colapsarTodosLosGrupos();}catch(e){}
+        try{colapsarTodo();}catch(e){}
         return;
       }
       // PROTECCIÓN 2: si Drive tiene MENOS datos que local, conservar local y subirlo
@@ -1056,7 +1056,7 @@ async function cargarDesdeGDrive(){
         await guardarEnGDrive();
         setSyncStatus('ok','✓ Google Drive');
         refreshAll();
-        try{hacerColapsables();colapsarTodosLosGrupos();}catch(e){}
+        try{colapsarTodo();}catch(e){}
         return;
       }
       // Drive tiene igual o más datos — usar Drive
@@ -1079,8 +1079,7 @@ async function cargarDesdeGDrive(){
         try{renderMesSaldoCC();}catch(e){}
       }
       // Tras sincronizar, dejar todos los párrafos colapsados
-      try{hacerColapsables();}catch(e){}
-      try{colapsarTodosLosGrupos();}catch(e){}
+      try{colapsarTodo();}catch(e){}
     }else{setSyncStatus('err','Error Drive');}
   }catch(e){
     // Si falla Drive, usar datos locales sin problema
@@ -1210,6 +1209,11 @@ function toggleMaskNode(node,btn){
   node.dataset.masked=masked?'0':'1';
   if(btn)btn.textContent=masked?'👁':'🙈';
 }
+function colapsarTodo(){
+  // Asegura que todas las secciones estén enhance-adas y luego colapsa todo
+  try{hacerColapsables();}catch(e){}
+  try{colapsarTodosLosGrupos();}catch(e){}
+}
 function hacerColapsables(){
   const skip=['formRegistroCard','saldoCCCard','apanel-movimiento'];
   document.querySelectorAll('.card').forEach(card=>{
@@ -1246,14 +1250,12 @@ function hacerColapsables(){
     eye.className='eye-btn';eye.textContent='👁';eye.title='Ocultar/mostrar montos';
     eye.onclick=(e)=>{e.stopPropagation();toggleMaskNode(body,eye);};
     row.appendChild(eye);
-    row.onclick=()=>{const col=body.classList.toggle('collapsed');chev.classList.toggle('collapsed',col);};
+    row.onclick=()=>{const col=body.classList.toggle('collapsed');chev.classList.toggle('collapsed',col);if(!col && body.querySelector('canvas')){setTimeout(()=>{try{window.dispatchEvent(new Event('resize'));}catch(e){}},60);}};
   });
 }
 function colapsarTodosLosGrupos(){
-  ['grpResumen','grpPatrimonio','grpSaldoCC','grpMesMetrics','grpAnualMetrics','grpAnualAcum','grpAhorroMetrics'].forEach(id=>{
-    const body=document.getElementById(id);
-    if(body)body.classList.add('collapsed');
-  });
+  // Colapsar TODOS los cuerpos de grupo (fijos y genéricos)
+  document.querySelectorAll('.grp-body').forEach(body=>body.classList.add('collapsed'));
   document.querySelectorAll('.grp-chevron').forEach(ch=>ch.classList.add('collapsed'));
 }
 function toggleMaskGeneric(containerId,btnEl){
@@ -1278,6 +1280,10 @@ function toggleGroupCollapse(bodyId,headEl){
   // Rotate chevron in the header
   const chevron=headEl.querySelector('.grp-chevron');
   if(chevron)chevron.classList.toggle('collapsed',collapsed);
+  // Si se expande y contiene gráficas, forzar redibujo
+  if(!collapsed && body.querySelector('canvas')){
+    setTimeout(()=>{try{window.dispatchEvent(new Event('resize'));}catch(e){}},60);
+  }
 }
 function toggleMaskGroup(group,btnEl){
   _maskState[group]=!_maskState[group];
