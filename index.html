@@ -48,10 +48,13 @@ body{font-family:-apple-system,'SF Pro Text','Segoe UI',sans-serif;background:va
 select,input[type=text],input[type=number],input[type=date]{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:16px;color:var(--text);background:var(--bg);appearance:none;-webkit-appearance:none;font-family:inherit}
 select:focus,input:focus{outline:2px solid var(--blue);outline-offset:-1px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn-primary{width:100%;padding:13px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px}
-.btn-primary:active{opacity:.8}
-.btn-secondary{width:100%;padding:11px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:6px}
-.btn-sm{padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;background:transparent;color:var(--text-2);font-family:inherit}
+.btn-primary{width:100%;padding:13px;background:var(--blue);color:#0d1117;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.btn-primary:hover{filter:brightness(1.1)}
+.btn-primary:active{opacity:.85}
+.btn-secondary{width:100%;padding:11px;background:var(--surface);color:var(--text);border:1px solid var(--text-3);border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:6px}
+.btn-secondary:hover{border-color:var(--text-2);background:var(--border-light)}
+.btn-sm{padding:5px 10px;border:1px solid var(--text-3);border-radius:6px;font-size:12px;cursor:pointer;background:var(--surface);color:var(--text);font-family:inherit;font-weight:500}
+.btn-sm:hover{border-color:var(--text-2);background:var(--border-light)}
 .month-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:12px;scrollbar-width:none}
 .month-row::-webkit-scrollbar{display:none}
 .mpill{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-2);white-space:nowrap;font-family:inherit;flex-shrink:0}
@@ -260,7 +263,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     <div class="grp-body collapsed" id="grpSaldoCC">
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
       <input type="text" id="saldoCC" placeholder="Saldo actual en cuenta corriente..." class="fmt-input" inputmode="numeric" oninput="fmtInput(this);" style="flex:1">
-      <button onclick="guardarSaldoCC()" id="ccGuardarBtn" style="padding:7px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-2);cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .2s">Guardar</button>
+      <button onclick="guardarSaldoCC()" id="ccGuardarBtn" style="padding:8px 16px;font-size:13px;font-weight:700;border:none;border-radius:var(--radius-sm);background:var(--green);color:#0d1117;cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .2s;box-shadow:0 2px 6px rgba(0,0,0,.3)">Guardar</button>
     </div>
     <!-- Métricas congeladas hasta nuevo guardado -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px">
@@ -1045,6 +1048,7 @@ async function cargarDesdeGDrive(){
         await guardarEnGDrive();
         setSyncStatus('ok','✓ Drive (local restaurado)');
         refreshAll();
+        try{hacerColapsables();colapsarTodosLosGrupos();}catch(e){}
         return;
       }
       // PROTECCIÓN 2: si Drive tiene MENOS datos que local, conservar local y subirlo
@@ -1052,6 +1056,7 @@ async function cargarDesdeGDrive(){
         await guardarEnGDrive();
         setSyncStatus('ok','✓ Google Drive');
         refreshAll();
+        try{hacerColapsables();colapsarTodosLosGrupos();}catch(e){}
         return;
       }
       // Drive tiene igual o más datos — usar Drive
@@ -1073,6 +1078,9 @@ async function cargarDesdeGDrive(){
         try{renderDashboard();}catch(e){}
         try{renderMesSaldoCC();}catch(e){}
       }
+      // Tras sincronizar, dejar todos los párrafos colapsados
+      try{hacerColapsables();}catch(e){}
+      try{colapsarTodosLosGrupos();}catch(e){}
     }else{setSyncStatus('err','Error Drive');}
   }catch(e){
     // Si falla Drive, usar datos locales sin problema
@@ -1548,19 +1556,67 @@ function sortTable(col,thEl){
   const arr=thEl.querySelector('.sort-arrow');
   if(arr)arr.textContent=s.asc?'↑':'↓';
   const tbody=tbl.querySelector('tbody');
-  const rows=Array.from(tbody.querySelectorAll('tr:not(.total-row):not(.edit-row)'));
-  const totals=Array.from(tbody.querySelectorAll('tr.total-row'));
-  rows.sort((a,b)=>{
-    const ci=thEl.cellIndex;
+  const ci=thEl.cellIndex;
+  const cmp=(a,b)=>{
     const ca=(a.cells[ci]&&a.cells[ci].textContent)||'';
     const cb=(b.cells[ci]&&b.cells[ci].textContent)||'';
     const na=parseFloat(ca.replace(/[^0-9.-]/g,''));
     const nb=parseFloat(cb.replace(/[^0-9.-]/g,''));
     if(!isNaN(na)&&!isNaN(nb))return s.asc?na-nb:nb-na;
     return s.asc?ca.localeCompare(cb,'es',{sensitivity:'base'}):cb.localeCompare(ca,'es',{sensitivity:'base'});
-  });
+  };
+  // ── Tabla jerárquica de Ppto: ordenar respetando estructura ──
+  if(tid==='pptoCompTable'){
+    sortPptoHierarchy(tbody,cmp);
+    return;
+  }
+  // Ordenamiento plano para el resto de tablas
+  const rows=Array.from(tbody.querySelectorAll('tr:not(.total-row):not(.edit-row)'));
+  const totals=Array.from(tbody.querySelectorAll('tr.total-row'));
+  rows.sort(cmp);
   rows.forEach(r=>tbody.appendChild(r));
   totals.forEach(r=>tbody.appendChild(r));
+}
+function sortPptoHierarchy(tbody,cmp){
+  // Recorre las filas y las agrupa: [sectionHeader?, categoryRow, ...subRows], preservando jerarquía
+  const all=Array.from(tbody.children);
+  const blocks=[]; // cada bloque = {section:tr|null, groups:[{cat:tr, subs:[tr...]}], totals:[tr...]}
+  let current=null; // bloque de sección actual
+  let currentGroup=null;
+  all.forEach(tr=>{
+    // Encabezado de sección: td con colspan (EGRESOS / INGRESOS) o separador
+    const isSection=tr.querySelector('td[colspan]')&&!tr.classList.contains('total-row');
+    const isTotal=tr.classList.contains('total-row');
+    const isSub=/(^|\s)sr_/.test(tr.className); // filas de subcategoría tienen clase sr_...
+    if(isSection){
+      current={section:tr,groups:[],totals:[]};
+      blocks.push(current);
+      currentGroup=null;
+    }else if(isTotal){
+      if(current)current.totals.push(tr); else blocks.push({section:null,groups:[],totals:[tr]});
+    }else if(isSub){
+      if(currentGroup)currentGroup.subs.push(tr);
+    }else{
+      // fila de categoría
+      currentGroup={cat:tr,subs:[]};
+      if(!current){current={section:null,groups:[],totals:[]};blocks.push(current);}
+      current.groups.push(currentGroup);
+    }
+  });
+  // Reordenar: dentro de cada sección ordena las categorías; dentro de cada categoría ordena sus subs
+  const frag=document.createDocumentFragment();
+  blocks.forEach(block=>{
+    if(block.section)frag.appendChild(block.section);
+    block.groups.sort((g1,g2)=>cmp(g1.cat,g2.cat));
+    block.groups.forEach(g=>{
+      frag.appendChild(g.cat);
+      g.subs.sort(cmp);
+      g.subs.forEach(sub=>frag.appendChild(sub));
+    });
+    block.totals.forEach(t=>frag.appendChild(t));
+  });
+  tbody.innerHTML='';
+  tbody.appendChild(frag);
 }
 function showBanner(id){const b=document.getElementById(id);b.style.display='block';setTimeout(()=>b.style.display='none',2200);}
 
