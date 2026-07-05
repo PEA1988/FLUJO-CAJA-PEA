@@ -256,7 +256,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px" onclick="toggleGroupCollapse('grpSaldoCC',this)" id="saldoCCHead" >
       <div style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
-        <span class="card-title" style="margin:0">Balance Mensual Proyectado</span>
+        <span class="card-title" style="margin:0">Disponible hoy</span>
       </div>
       <button onclick="event.stopPropagation();toggleMaskGroup('saldocc',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
     </div>
@@ -399,7 +399,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
   <div class="card">
     <div class="card-title">Presupuesto vs real — por categoría</div>
     <div style="overflow-x:auto">
-      <table class="tbl" id="pptoCompTable"><thead><tr><th>Categoría / Subcategoría</th><th style="text-align:center;width:64px">Cerrar</th><th onclick="sortTable('ppto',this)" data-col="ppto" style="cursor:pointer;user-select:none;text-align:right;">Presupuesto <span class="sort-arrow"></span></th><th onclick="sortTable('real',this)" data-col="real" style="cursor:pointer;user-select:none;text-align:right;">Real <span class="sort-arrow"></span></th><th onclick="sortTable('diff',this)" data-col="diff" style="cursor:pointer;user-select:none;text-align:right;">Diferencia <span class="sort-arrow"></span></th><th onclick="sortTable('estado',this)" data-col="estado" style="cursor:pointer;user-select:none;text-align:right;">Estado <span class="sort-arrow"></span></th></tr></thead>
+      <table class="tbl" id="pptoCompTable"><thead><tr><th>Categoría / Subcategoría</th><th style="text-align:center;width:64px">Cerrar</th><th style="text-align:right">Presupuesto</th><th style="text-align:right">Real</th><th style="text-align:right">Diferencia</th><th style="text-align:right">Estado</th></tr></thead>
       <tbody id="pptoBody"></tbody></table>
     </div>
   </div>
@@ -417,36 +417,17 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       <select id="mesMesSel" onchange="onMesSelChange()" style="width:100%"></select>
     </div>
   </div>
-  <div class="dash-group">
-    <div class="dash-group-head" onclick="toggleGroupCollapse('grpMesMetrics',this)" style="cursor:pointer">
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
-        <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Resumen del mes</span>
-      </div>
-      <button onclick="event.stopPropagation();toggleMaskGeneric('mensMetrics',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
-    </div>
-    <div class="grp-body collapsed" id="grpMesMetrics"><div class="metrics" id="mensMetrics"></div></div>
-  </div>
-  <!-- Saldo cuenta corriente (resumen, mismo que Registro) -->
-  <div class="card" id="mesSaldoCCCard" style="display:none">
-    <div class="card-title">Saldo cuenta corriente</div>
-    <div class="metrics" id="mesSaldoCCMetrics"></div>
-  </div>
+  <p style="font-size:12px;color:var(--text-3);margin:-4px 0 12px">Análisis detallado del mes seleccionado. El resumen general está en el módulo Registro.</p>
   <!-- TC pendiente del mes -->
   <div id="tcResumenMes"></div>
-  <div id="mesChartsGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-    <div class="card" style="margin:0">
-      <div class="card-title" style="font-size:12px">Egresos por categoría <span style="font-size:10px;color:var(--red);font-weight:400">(solo egr)</span></div>
-      <div class="legend" id="catLegend" style="font-size:10px"></div>
-      <div class="chart-wrap" style="height:160px"><canvas id="catChart" role="img" aria-label="Categorías">Categorías</canvas></div>
-    </div>
+  <div id="mesChartsGrid" style="display:grid;grid-template-columns:1fr;gap:10px">
     <div class="card" style="margin:0;min-width:0;overflow:hidden">
       <div class="card-title" style="font-size:12px">Movimientos diarios <span style="font-size:9px;font-weight:400"><span style="color:var(--blue)">■ Ing</span> · <span style="color:var(--red)">■ Egr</span></span></div>
       <div class="chart-wrap" style="height:160px;position:relative;width:100%"><canvas id="diaChart" role="img" aria-label="Diario" style="max-width:100%">Diario</canvas></div>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">Detalle por categoría</div>
+    <div class="card-title">Egresos por categoría</div>
     <div id="catDetail"></div>
   </div>
 </div>
@@ -1061,7 +1042,7 @@ async function cargarDesdeGDrive(){
       }
       // Drive tiene igual o más datos — usar Drive
       {
-        datos=j.datos||[];ahorros=j.ahorros||[];
+        datos=j.datos||[];ahorros=j.ahorros||[];_invalidarIndice();
         presupuesto=j.presupuesto||{};pagosTC=j.pagosTC||[];
         saldosIniciales=j.saldosIniciales||{};
         if(j.partidasCerradas)partidasCerradas=j.partidasCerradas;
@@ -1112,16 +1093,43 @@ function saveLocal(){
     localStorage.setItem('fc_p',JSON.stringify(presupuesto));
     localStorage.setItem('fc_tc',JSON.stringify(pagosTC));
     localStorage.setItem('fc_si',JSON.stringify(saldosIniciales));localStorage.setItem('fc_cc',String(saldoCC));localStorage.setItem('fc_pc',JSON.stringify(partidasCerradas));
-  }catch(e){}
+  }catch(e){
+    // Si localStorage se llena (cuota excedida), avisar en vez de fallar en silencio
+    if(e && (e.name==='QuotaExceededError'||/quota/i.test(e.message||''))){
+      alert('⚠️ El almacenamiento local está lleno. Exporta un respaldo (Excel) y considera archivar meses antiguos.');
+    }
+  }
   // Normalize gastoCon values to TC1/TC2
   datos.forEach(d=>{
     if(d.gastoCon==='Tarjeta de Crédito 1')d.gastoCon='TC1';
     else if(d.gastoCon==='Tarjeta de Crédito 2')d.gastoCon='TC2';
   });
+  _invalidarIndice(); // los datos cambiaron: recomputar índice en el próximo acceso
+}
+// ── Índice por período para acelerar filtros con muchos datos ──
+let _idxPeriodo=null; // { 'año-mes': [movimientos] }
+function _invalidarIndice(){_idxPeriodo=null;}
+function movimientosDe(año,mes){
+  // Devuelve los movimientos de un período usando un índice cacheado (O(1) tras primera construcción)
+  if(!_idxPeriodo){
+    _idxPeriodo={};
+    for(let i=0;i<datos.length;i++){
+      const d=datos[i];
+      const k=d.año+'-'+d.mes;
+      (_idxPeriodo[k]||(_idxPeriodo[k]=[])).push(d);
+    }
+  }
+  return _idxPeriodo[año+'-'+mes]||[];
+}
+// ── Guardado a Drive con debounce: agrupa escrituras rápidas en una sola ──
+let _driveTimer=null;
+function guardarEnGDriveDebounced(){
+  if(_driveTimer)clearTimeout(_driveTimer);
+  _driveTimer=setTimeout(()=>{_driveTimer=null;if(tokenValido())guardarEnGDrive();},1200);
 }
 function save(){
-  saveLocal(); // siempre guarda local primero
-  if(tokenValido())guardarEnGDrive(); // sincroniza con Drive si hay token
+  saveLocal(); // siempre guarda local primero (rápido, inmediato)
+  guardarEnGDriveDebounced(); // sincroniza con Drive agrupando escrituras
   // Actualizar saldo CC con los datos más recientes
   try{calcSaldoCC();}catch(e){}
 }
@@ -1135,6 +1143,7 @@ function loadLocal(){
     const scc=localStorage.getItem('fc_cc');if(scc!==null)saldoCC=parseFloat(scc)||0;
     const pc=localStorage.getItem('fc_pc');if(pc)partidasCerradas=JSON.parse(pc);
   }catch(e){}
+  _invalidarIndice();
   migrarCorte25();
 }
 // Migración: re-deriva mes/año de cada movimiento según corte día 25.
@@ -1304,7 +1313,7 @@ function renderDashboard(){
     if(esActual){const dr=diasRestantesPeriodo();dias.textContent=dr===0?'Último día del período (corte 24)':`${dr} días restantes (corte 24)`;}
     else{dias.textContent='Período seleccionado';}
   }
-  const mesD=datos.filter(d=>d.mes===mes&&d.año===ano);
+  const mesD=movimientosDe(ano,mes);
   const ing=mesD.filter(d=>d.tipo==='Ingresos').reduce((s,d)=>s+d.monto,0);
   const egr=mesD.filter(d=>d.tipo==='Egresos').reduce((s,d)=>s+d.monto,0);
   const bal=ing-egr;
@@ -1571,12 +1580,7 @@ function sortTable(col,thEl){
     if(!isNaN(na)&&!isNaN(nb))return s.asc?na-nb:nb-na;
     return s.asc?ca.localeCompare(cb,'es',{sensitivity:'base'}):cb.localeCompare(ca,'es',{sensitivity:'base'});
   };
-  // ── Tabla jerárquica de Ppto: ordenar respetando estructura ──
-  if(tid==='pptoCompTable'){
-    sortPptoHierarchy(tbody,cmp);
-    return;
-  }
-  // Ordenamiento plano para el resto de tablas
+  // Ordenamiento plano para las tablas (la de Ppto ya no es ordenable)
   const rows=Array.from(tbody.querySelectorAll('tr:not(.total-row):not(.edit-row)'));
   const totals=Array.from(tbody.querySelectorAll('tr.total-row'));
   rows.sort(cmp);
@@ -1733,6 +1737,7 @@ function syncAllPeriodSelectors(){
   if(ppMes)ppMes.value=G_MES;
 }
 function renderMesSaldoCC(){
+  if(!document.getElementById('mesSaldoCCCard'))return; // sección eliminada en optimización
   const scc=leerSaldoCC();
   const card=document.getElementById('mesSaldoCCCard');
   const cont=document.getElementById('mesSaldoCCMetrics');
@@ -1770,47 +1775,10 @@ function renderMes(){
   const selYear=parseInt(anoSel.value);
   const selMesIdx=parseInt(mesSel.value);
   const mes=MESES[selMesIdx];
-  const d=datos.filter(x=>x.año===selYear&&x.mes===mes);
-  const ing=d.filter(x=>x.tipo==='Ingresos').reduce((s,x)=>s+x.monto,0);
-  const egr=d.filter(x=>x.tipo==='Egresos').reduce((s,x)=>s+x.monto,0);
-  const bal=ing-egr;
-  // Gastos extra = categorías que superaron su presupuesto
-  const keyM=pptoKey(selYear,mes);
-  const ppM=presupuesto[keyM]||{};
-  const ppCatM={};Object.entries(ppM).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];ppCatM[cat]=(ppCatM[cat]||0)+v;});
-  const gtCatM={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{gtCatM[x.categoria]=(gtCatM[x.categoria]||0)+x.monto;});
-  let gastosExtraM=0;Object.keys(ppCatM).forEach(cat=>{const diff=(gtCatM[cat]||0)-ppCatM[cat];if(diff>0)gastosExtraM+=diff;});
-  // Gasto vs presupuesto del mes
-  const pptoTotalM=Object.values(ppCatM).reduce((s,v)=>s+v,0);
-  const pctPpto=pptoTotalM>0?Math.round(egr/pptoTotalM*100):0;
-  const barColor=pctPpto>100?'var(--red)':pctPpto>85?'var(--amber)':'var(--green)';
-  // Mayor gasto del mes
-  const gastosCat={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{gastosCat[x.categoria]=(gastosCat[x.categoria]||0)+x.monto;});
-  const topCatM=Object.entries(gastosCat).sort((a,b)=>b[1]-a[1])[0];
-  // Patrimonio total (mismo cálculo que registro)
-  let patM=Object.values(saldosIniciales).reduce((s,v)=>s+v,0);
-  ahorros.forEach(a=>{patM+=a.monto;});
-  document.getElementById('mensMetrics').innerHTML=`
-    <div class="metric m-blue"><div class="metric-label">Ingresos</div><div class="metric-value">$${fmt(ing)}</div></div>
-    <div class="metric m-red"><div class="metric-label">Egresos</div><div class="metric-value">$${fmt(egr)}</div></div>
-    <div class="metric ${bal>=0?'m-green':'m-red'}"><div class="metric-label">Balance del mes</div><div class="metric-value">${bal>=0?'+':'-'}$${fmt(Math.abs(bal))}</div></div>
-    <div class="metric ${gastosExtraM>0?'m-orange':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtraM)}</div></div>
-    <div class="metric" style="grid-column:span 2"><div class="metric-label">Gasto vs presupuesto · ${pctPpto}%</div>
-      <div style="background:var(--border-light);border-radius:4px;height:8px;overflow:hidden;margin-top:6px">
-        <div style="height:100%;border-radius:4px;width:${Math.min(100,pctPpto)}%;background:${barColor};transition:width .4s"></div>
-      </div>
-      <div class="metric-sub">$${fmt(egr)} de $${fmt(pptoTotalM)}</div>
-    </div>
-    <div class="metric"><div class="metric-label">Mayor gasto</div><div class="metric-value" style="font-size:16px">${topCatM?topCatM[0]:'—'}</div><div class="metric-sub">${topCatM?'$'+fmt(topCatM[1]):''}</div></div>
-    <div class="metric m-green"><div class="metric-label">Patrimonio</div><div class="metric-value" style="font-size:18px">$${fmt(patM)}</div></div>`;
-  renderMesSaldoCC();
+  const d=movimientosDe(selYear,mes);
   renderTCResumen('tcResumenMes', mes);
   const cats={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{cats[x.categoria]=(cats[x.categoria]||0)+x.monto;});
   const cL=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
-  const catTotal=cL.reduce((s,l)=>s+cats[l],0);
-  document.getElementById('catLegend').innerHTML=cL.map((l,i)=>{const pct=catTotal>0?Math.round(cats[l]/catTotal*100):0;return `<div class="legend-item"><div class="legend-dot" style="background:${CCOLORS[i%CCOLORS.length]}"></div>${l} <strong style="color:var(--text);margin-left:3px">${pct}%</strong></div>`;}).join('');
-  destroyChart('catChart');
-  if(cL.length)charts['catChart']=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:cL,datasets:[{data:cL.map(l=>cats[l]),backgroundColor:CCOLORS.slice(0,cL.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:20},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}},datalabels:{display:false}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});
   const dias={};d.forEach(x=>{if(!dias[x.fecha])dias[x.fecha]={ing:0,egr:0};if(x.tipo==='Ingresos')dias[x.fecha].ing+=x.monto;else dias[x.fecha].egr+=x.monto;});
   const dk=Object.keys(dias).sort();
   destroyChart('diaChart');
@@ -1824,7 +1792,7 @@ function renderMes(){
     datalabels:{anchor:'end',align:'top',rotation:-90,font:{size:8,weight:'600'},color:'#fff',textShadowBlur:4,textShadowColor:'rgba(0,0,0,0.9)',display:true,formatter:(v,ctx)=>{const grandTotal=dIT+dET;if(!v||!grandTotal)return'';const p=Math.round(v/grandTotal*100);return p>0?p+'%':''}}
   },scales:{x:{ticks:{font:{size:10}}},y:{grace:'18%',ticks:{callback:v=>`$${fmt(v)}`,font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});}
   const total=Object.values(cats).reduce((s,v)=>s+v,0);
-  document.getElementById('catDetail').innerHTML='<table class="tbl" id="catDetailTable"><thead><tr><th onclick="sortTable("cat",this)" data-col="cat" style="cursor:pointer;user-select:none;">Categoría <span class="sort-arrow"></span></th><th onclick="sortTable("monto",this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th onclick="sortTable("pct",this)" data-col="pct" style="cursor:pointer;user-select:none;text-align:right;">% <span class="sort-arrow"></span></th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>';
+  document.getElementById('catDetail').innerHTML=cL.length?('<table class="tbl" id="catDetailTable"><thead><tr><th>Categoría</th><th style="text-align:right">Monto</th><th style="text-align:right">%</th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>'):'<p style="color:var(--text-3);font-size:13px;padding:8px">Sin egresos registrados este mes.</p>';
 }
 
 // ─── ANUAL ────────────────────────────────────────────────────────────────────
@@ -2899,6 +2867,10 @@ function aplicarMesVista(mesIdx,ano){
   const ov=document.getElementById('mesPickerOverlay');
   if(ov)ov.remove();
 }
+// Antes de cerrar/recargar: si hay una escritura a Drive pendiente, forzarla
+window.addEventListener('beforeunload',()=>{
+  if(_driveTimer){clearTimeout(_driveTimer);_driveTimer=null;try{if(tokenValido())guardarEnGDrive();}catch(e){}}
+});
 async function init(){
   // Inicializar período al ciclo actual (corte día 25)
   const _perInit=periodoActual();
