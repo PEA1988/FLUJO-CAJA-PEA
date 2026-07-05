@@ -599,6 +599,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     <div class="card-title" style="color:var(--red)">Zona de peligro</div>
     <p style="font-size:12px;color:var(--text-2);margin:0 0 10px">Borra TODOS los datos (movimientos, ahorros, presupuestos, tarjetas, saldos) y deja la app como recién instalada. Esta acción no se puede deshacer.</p>
     <button onclick="formatearDatos()" style="font-size:12px;padding:8px 14px;border:1px solid var(--red);border-radius:var(--radius-sm);background:transparent;color:var(--red);cursor:pointer;font-family:inherit;font-weight:600">🗑️ Formatear todos los datos</button>
+    <button onclick="restaurarRespaldo()" style="font-size:12px;padding:8px 14px;border:1px solid var(--green);border-radius:var(--radius-sm);background:transparent;color:var(--green);cursor:pointer;font-family:inherit;font-weight:600;margin-left:8px">♻️ Restaurar último respaldo</button>
   </div>
 </div>
 
@@ -998,8 +999,33 @@ async function buscarOCrearArchivo(){
   return 'notfound';
 }
 
+function respaldoLocal(){
+  // Guarda un snapshot de seguridad solo si hay datos (nunca sobrescribe con vacío)
+  try{
+    if(datos.length>0||ahorros.length>0){
+      const snap={datos,ahorros,presupuesto,pagosTC,saldosIniciales,saldoCC,partidasCerradas,ts:Date.now()};
+      localStorage.setItem('fc_backup',JSON.stringify(snap));
+    }
+  }catch(e){}
+}
+function restaurarRespaldo(){
+  try{
+    const b=localStorage.getItem('fc_backup');
+    if(!b){alert('No hay respaldo local disponible.');return;}
+    const snap=JSON.parse(b);
+    if(!confirm('¿Restaurar el último respaldo local? Movimientos: '+(snap.datos||[]).length+'. Fecha: '+new Date(snap.ts).toLocaleString()))return;
+    datos=snap.datos||[];ahorros=snap.ahorros||[];presupuesto=snap.presupuesto||{};
+    pagosTC=snap.pagosTC||[];saldosIniciales=snap.saldosIniciales||{};
+    saldoCC=snap.saldoCC||0;partidasCerradas=snap.partidasCerradas||{};
+    saveLocal();
+    try{guardarEnGDrive();}catch(e){}
+    refreshAll();try{renderDashboard();calcSaldoCC();}catch(e){}
+    alert('✓ Respaldo restaurado con '+datos.length+' movimientos.');
+  }catch(e){alert('Error al restaurar: '+e.message);}
+}
 async function cargarDesdeGDrive(){
   if(!tokenValido())return;
+  respaldoLocal(); // snapshot de seguridad antes de sincronizar
   try{
     const estado=await buscarOCrearArchivo();
     if(estado==='notfound'){
@@ -1011,11 +1037,25 @@ async function cargarDesdeGDrive(){
     const r=await gdFetch(`https://www.googleapis.com/drive/v3/files/${gdFileId}?alt=media`);
     if(r.ok){
       const j=await r.json();
-      // Merge: Drive gana si tiene más datos que local
       const driveTotal=(j.datos||[]).length+(j.ahorros||[]).length;
       const localTotal=datos.length+ahorros.length;
-      if(driveTotal>=localTotal){
-        // Drive tiene igual o más datos — usar Drive
+      // PROTECCIÓN 1: nunca dejar que Drive vacío borre datos locales existentes
+      if(driveTotal===0 && localTotal>0){
+        // Drive está vacío pero local tiene datos → subir local (recuperar)
+        await guardarEnGDrive();
+        setSyncStatus('ok','✓ Drive (local restaurado)');
+        refreshAll();
+        return;
+      }
+      // PROTECCIÓN 2: si Drive tiene MENOS datos que local, conservar local y subirlo
+      if(driveTotal < localTotal){
+        await guardarEnGDrive();
+        setSyncStatus('ok','✓ Google Drive');
+        refreshAll();
+        return;
+      }
+      // Drive tiene igual o más datos — usar Drive
+      {
         datos=j.datos||[];ahorros=j.ahorros||[];
         presupuesto=j.presupuesto||{};pagosTC=j.pagosTC||[];
         saldosIniciales=j.saldosIniciales||{};
@@ -1024,9 +1064,6 @@ async function cargarDesdeGDrive(){
         const _camb=migrarCorte25(); // re-agrupar por corte día 25
         saveLocal(); // actualizar local con datos de Drive
         if(_camb>0){try{await guardarEnGDrive();}catch(e){}}
-      } else {
-        // Local tiene más datos — subir local a Drive
-        await guardarEnGDrive();
       }
       setSyncStatus('ok','✓ Google Drive');refreshAll();
       {
