@@ -1228,9 +1228,9 @@ function hacerColapsables(){
     }
     if(!header)return;
     card.dataset.enh='1';
-    // Envolver todo lo que sigue al header en un body colapsable
+    // Envolver todo lo que sigue al header en un body colapsable (colapsado por defecto)
     const body=document.createElement('div');
-    body.className='grp-body';
+    body.className='grp-body collapsed';
     let n=header.nextSibling;
     while(n){const next=n.nextSibling;body.appendChild(n);n=next;}
     card.appendChild(body);
@@ -1240,7 +1240,7 @@ function hacerColapsables(){
     const left=document.createElement('div');
     left.style.cssText='display:flex;align-items:center;gap:8px;flex:1;min-width:0';
     const chev=document.createElement('span');
-    chev.className='grp-chevron';chev.textContent='▾';
+    chev.className='grp-chevron collapsed';chev.textContent='▾';
     chev.style.cssText='font-size:11px;color:var(--text-3);transition:transform .2s;flex:0 0 auto';
     card.insertBefore(row,header);
     left.appendChild(chev);
