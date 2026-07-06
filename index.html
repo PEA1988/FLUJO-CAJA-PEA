@@ -512,7 +512,16 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
         </div>
       </div>
     </div>
-    <div class="metrics" id="acumMetrics"></div>
+    <div class="dash-group">
+      <div class="dash-group-head" onclick="toggleGroupCollapse('grpAcumMetrics',this)" style="cursor:pointer">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="grp-chevron collapsed" style="font-size:11px;color:var(--text-3);transition:transform .2s">▾</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Totales acumulados</span>
+        </div>
+        <button onclick="event.stopPropagation();toggleMaskGeneric('acumMetrics',this)" class="eye-btn" title="Ocultar/mostrar montos">👁</button>
+      </div>
+      <div class="grp-body collapsed" id="grpAcumMetrics"><div class="metrics" id="acumMetrics"></div></div>
+    </div>
     <div class="card">
       <div class="card-title">Acumulado por categoría y subcategoría</div>
       <div style="overflow-x:auto">
@@ -530,6 +539,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       <select id="fMes" onchange="renderHist()" style="flex:1;min-width:90px"><option value="">Todos los meses</option></select>
       <select id="fTipo" onchange="renderHist()" style="flex:1;min-width:90px"><option value="">Ing+Egr</option><option value="Egresos">Egresos</option><option value="Ingresos">Ingresos</option></select>
       <select id="fCat" onchange="renderHist()" style="flex:1;min-width:100px"><option value="">Todas</option></select>
+      <select id="fPago" onchange="renderHist()" style="flex:1;min-width:120px"><option value="">Pagado con: todos</option><option value="Cuenta Corriente">Cuenta Corriente</option><option value="TC1">Tarjeta de Crédito 1</option><option value="TC2">Tarjeta de Crédito 2</option></select>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <p id="histCount" style="font-size:11px;color:var(--text-3);margin:0"></p>
@@ -698,7 +708,7 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       <div class="chart-wrap" style="height:160px;position:relative;width:100%"><canvas id="ahorroDonut" role="img" aria-label="Patrimonio" style="max-width:100%">Patrimonio</canvas></div>
     </div>
     <div class="card" style="margin:0;min-width:0;overflow:hidden">
-      <div class="card-title" style="font-size:12px">Evolución acumulada</div>
+      <div class="card-title" style="font-size:12px">Evolución acumulada (semanal)</div>
       <div class="chart-wrap" style="height:160px;position:relative;width:100%"><canvas id="ahorroLine" role="img" aria-label="Evolución ahorros" style="max-width:100%">Evolución</canvas></div>
     </div>
   </div>
@@ -1224,11 +1234,10 @@ function colapsarTodo(){
   try{colapsarTodosLosGrupos();}catch(e){}
 }
 function hacerColapsables(){
-  const skip=['formRegistroCard','saldoCCCard','apanel-movimiento'];
+  const skip=['formRegistroCard','saldoCCCard'];
   document.querySelectorAll('.card').forEach(card=>{
     if(card.dataset.enh==='1')return;
     if(skip.includes(card.id))return;
-    if(card.closest('#apanel-movimiento'))return;
     // Localizar el header (título directo o dentro de un wrapper)
     let header=card.querySelector(':scope > .card-title');
     if(!header){
@@ -1301,6 +1310,39 @@ function toggleMaskGroup(group,btnEl){
   try{renderDashboard();}catch(e){}
   try{calcSaldoCC();}catch(e){}
 }
+function mostrarDetalleGastosExtra(){
+  const d=window._gastosExtraDetalle;
+  if(!d||!d.items.length)return;
+  const filas=d.items.map(it=>`
+    <tr>
+      <td style="font-size:11px;padding:6px 4px">${it.cat}<div style="font-size:9px;color:var(--text-3)">↳ ${it.sub}</div></td>
+      <td style="text-align:right;font-size:11px;color:var(--text-3);padding:6px 4px">$${fmt(it.ppto)}</td>
+      <td style="text-align:right;font-size:11px;padding:6px 4px">$${fmt(it.real)}</td>
+      <td style="text-align:right;font-size:11px;font-weight:700;color:var(--orange);padding:6px 4px">+$${fmt(it.exceso)}</td>
+    </tr>`).join('');
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';overlay.style.display='flex';overlay.id='gastosExtraOverlay';
+  overlay.onclick=(e)=>{if(e.target===overlay)overlay.remove();};
+  overlay.innerHTML=`<div class="modal" style="max-width:480px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h2 style="margin:0">Gastos extra · ${d.mes} ${d.ano}</h2>
+      <button onclick="document.getElementById('gastosExtraOverlay').remove()" class="eye-btn">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-2);margin:0 0 12px">Subcategorías que superaron su presupuesto. Total exceso: <strong style="color:var(--orange)">$${fmt(d.total)}</strong></p>
+    <div style="overflow-x:auto">
+      <table class="tbl" style="width:100%">
+        <thead><tr>
+          <th style="font-size:10px">Categoría / Subcat.</th>
+          <th style="text-align:right;font-size:10px">Ppto</th>
+          <th style="text-align:right;font-size:10px">Real</th>
+          <th style="text-align:right;font-size:10px">Exceso</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
 function renderDashboard(){
   const mes=MESES[G_MES];
   const ano=G_ANO;
@@ -1325,6 +1367,17 @@ function renderDashboard(){
   const _ppC={};Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];_ppC[cat]=(_ppC[cat]||0)+v;});
   const _gtC={};mesD.filter(d=>d.tipo==='Egresos').forEach(d=>{_gtC[d.categoria]=(_gtC[d.categoria]||0)+d.monto;});
   let gastosExtra=0;Object.keys(_ppC).forEach(cat=>{const diff=(_gtC[cat]||0)-_ppC[cat];if(diff>0)gastosExtra+=diff;});
+  // Detalle del exceso por subcategoría (para el desglose al clickear)
+  const _ppSub={};Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{_ppSub[k]=(_ppSub[k]||0)+v;});
+  const _gtSub={};mesD.filter(d=>d.tipo==='Egresos').forEach(d=>{const sk=d.categoria+'|'+d.subcategoria;_gtSub[sk]=(_gtSub[sk]||0)+d.monto;});
+  const _detalleExtra=[];
+  Object.keys(_gtSub).forEach(sk=>{
+    const ppv=_ppSub[sk]||0;const real=_gtSub[sk];
+    const exceso=real-ppv;
+    if(exceso>0){const[cat,sub]=sk.split('|');_detalleExtra.push({cat,sub,ppto:ppv,real,exceso});}
+  });
+  _detalleExtra.sort((a,b)=>b.exceso-a.exceso);
+  window._gastosExtraDetalle={mes,ano,total:gastosExtra,items:_detalleExtra};
   const topCat=Object.entries(_gtC).sort((a,b)=>b[1]-a[1])[0];
   let pat=Object.values(saldosIniciales).reduce((s,v)=>s+v,0);
   ahorros.forEach(a=>{pat+=a.monto;});
@@ -1333,7 +1386,7 @@ function renderDashboard(){
     <div class="metric m-blue"><div class="metric-label">Ingresos</div><div class="metric-value">$${fmt(ing)}</div></div>
     <div class="metric m-red"><div class="metric-label">Egresos</div><div class="metric-value">$${fmt(egr)}</div></div>
     <div class="metric ${bal>=0?'m-green':'m-red'}"><div class="metric-label">Balance del mes</div><div class="metric-value">${bal>=0?'+':'-'}$${fmt(Math.abs(bal))}</div></div>
-    <div class="metric ${gastosExtra>0?'m-orange':'m-green'}"><div class="metric-label">Gastos extra mes</div><div class="metric-value">$${fmt(gastosExtra)}</div></div>
+    <div class="metric ${gastosExtra>0?'m-orange':'m-green'}" style="${gastosExtra>0?'cursor:pointer':''}" ${gastosExtra>0?'onclick="mostrarDetalleGastosExtra()"':''}><div class="metric-label">Gastos extra mes${gastosExtra>0?' <span style="color:var(--orange);font-size:9px">▸ ver</span>':''}</div><div class="metric-value">$${fmt(gastosExtra)}</div></div>
     <div class="metric" style="grid-column:span 2"><div class="metric-label">Gasto vs presupuesto · ${pct}%</div>
       <div style="background:var(--border-light);border-radius:4px;height:8px;overflow:hidden;margin-top:6px">
         <div style="height:100%;border-radius:4px;width:${Math.min(100,pct)}%;background:${barColor};transition:width .4s"></div>
@@ -1826,6 +1879,7 @@ function renderAnual(){
   // Totalizador acumulado a la fecha (siempre sobre todos los datos)
   const acumTI=datos.filter(d=>d.tipo==='Ingresos').reduce((s,d)=>s+d.monto,0);
   const acumTE=datos.filter(d=>d.tipo==='Egresos').reduce((s,d)=>s+d.monto,0);
+  const tc1Pend=getTCPendiente('TC1').pendiente;
   document.getElementById('anualAcumMetrics').innerHTML=`
     <div class="metric" style="border:1px solid var(--blue);grid-column:span 2">
       <div class="metric-label" style="color:var(--blue)">▸ Acumulado total a la fecha</div>
@@ -1833,6 +1887,10 @@ function renderAnual(){
         <div><div style="font-size:10px;color:var(--text-3)">Ingresos</div><div style="font-size:15px;font-weight:600;color:var(--green)">$${fmt(acumTI)}</div></div>
         <div><div style="font-size:10px;color:var(--text-3)">Egresos</div><div style="font-size:15px;font-weight:600;color:var(--red)">$${fmt(acumTE)}</div></div>
         <div><div style="font-size:10px;color:var(--text-3)">Balance</div><div style="font-size:15px;font-weight:600;color:${acumTI>=acumTE?'var(--green)':'var(--red)'}">${acumTI>=acumTE?'+':'-'}$${fmt(Math.abs(acumTI-acumTE))}</div></div>
+      </div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-light)">
+        <div style="font-size:10px;color:var(--text-3)">Tarjeta de Crédito 1 — pago pendiente</div>
+        <div style="font-size:15px;font-weight:600;color:${tc1Pend>0?'var(--amber)':'var(--text-3)'}">$${fmt(tc1Pend)}</div>
       </div>
     </div>`;
   renderTCResumen('tcResumenAnual');
@@ -2234,10 +2292,22 @@ function renderAcum(){
   if(fS)f=f.filter(d=>d.subcategoria===fS);
   const tI=f.filter(d=>d.tipo==='Ingresos').reduce((s,d)=>s+d.monto,0);
   const tE=f.filter(d=>d.tipo==='Egresos').reduce((s,d)=>s+d.monto,0);
+  // Gasto extra acumulado: suma de lo gastado por sobre el presupuesto en cada categoría/mes
+  let gastoExtraAcum=0;
+  const _mesesUnicos=[...new Set(datos.map(d=>d.año+'|'+d.mes))];
+  _mesesUnicos.forEach(ym=>{
+    const [a,m]=ym.split('|');
+    const key=pptoKey(parseInt(a),m);
+    const pp=presupuesto[key]||{};
+    const ppC={};Object.entries(pp).filter(([k])=>!k.startsWith('ING|')).forEach(([k,v])=>{const cat=k.split('|')[0];ppC[cat]=(ppC[cat]||0)+v;});
+    const gtC={};datos.filter(d=>d.tipo==='Egresos'&&d.año==a&&d.mes===m).forEach(d=>{gtC[d.categoria]=(gtC[d.categoria]||0)+d.monto;});
+    Object.keys(ppC).forEach(cat=>{const diff=(gtC[cat]||0)-ppC[cat];if(diff>0)gastoExtraAcum+=diff;});
+  });
   document.getElementById('acumMetrics').innerHTML=`
     <div class="metric m-blue"><div class="metric-label">Total ingresos</div><div class="metric-value">$${fmt(tI)}</div></div>
     <div class="metric m-red"><div class="metric-label">Total egresos</div><div class="metric-value">$${fmt(tE)}</div></div>
-    <div class="metric ${tI>=tE?'m-green':'m-red'}" style="grid-column:span 2"><div class="metric-label">Balance acumulado</div><div class="metric-value">${tI>=tE?'+':'-'}$${fmt(Math.abs(tI-tE))}</div></div>`;
+    <div class="metric ${tI>=tE?'m-green':'m-red'}"><div class="metric-label">Balance acumulado</div><div class="metric-value">${tI>=tE?'+':'-'}$${fmt(Math.abs(tI-tE))}</div></div>
+    <div class="metric ${gastoExtraAcum>0?'m-orange':'m-green'}"><div class="metric-label">Gasto extra acumulado</div><div class="metric-value">$${fmt(gastoExtraAcum)}</div></div>`;
   const tree={};
   f.forEach(d=>{if(!tree[d.categoria])tree[d.categoria]={total:0,subs:{}};tree[d.categoria].total+=d.monto;tree[d.categoria].subs[d.subcategoria]=(tree[d.categoria].subs[d.subcategoria]||0)+d.monto;});
   const total=f.reduce((s,d)=>s+d.monto,0);
@@ -2306,8 +2376,13 @@ function sortHist(col){
 }
 function renderHist(){
   const fM=document.getElementById('fMes').value,fT=document.getElementById('fTipo').value,fC=document.getElementById('fCat').value;
+  const fPel=document.getElementById('fPago');const fP=fPel?fPel.value:'';
   let f=datos;
   if(fM)f=f.filter(d=>d.mes===fM);if(fT)f=f.filter(d=>d.tipo===fT);if(fC)f=f.filter(d=>d.categoria===fC);
+  if(fP)f=f.filter(d=>{
+    const g=d.gastoCon==='Tarjeta de Crédito 1'?'TC1':d.gastoCon==='Tarjeta de Crédito 2'?'TC2':d.gastoCon;
+    return g===fP;
+  });
   // Apply column sort
   f=[...f].sort((a,b)=>{
     const col=histSort.col;
@@ -2535,10 +2610,30 @@ function renderAhorros(){
   const movsGraf=ahorros
     .filter(a=>['deposito','rentabilidad','retiro','perdida'].includes(a.tipo) && !a.excluirAcum)
     .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  // Helper: obtener la clave de semana (lunes) de una fecha
+  function claveSemanaLunes(fechaStr){
+    const d=parseLocalDate(fechaStr);
+    const dow=(d.getDay()+6)%7; // 0=lunes ... 6=domingo
+    d.setDate(d.getDate()-dow);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  // Consolidar movimientos por semana, acumulando patrimonio al cierre de cada semana
   let acumGraf=baseInicial;
-  const evo=movsGraf.map(a=>{acumGraf+=a.monto;return{f:a.fecha,v:acumGraf,esRetiro:a.tipo==='retiro'||a.tipo==='perdida'};});
-  // Add base point if there's initial savings
-  const today2=new Date();const todayStr=`${today2.getFullYear()}-${String(today2.getMonth()+1).padStart(2,'0')}-${String(today2.getDate()).padStart(2,'0')}`;const evoConBase=baseInicial>0?[{f:movsGraf[0]?.fecha||todayStr,v:baseInicial,esRetiro:false},...evo]:evo;
+  const semanas={}; // claveLunes -> {v:acumFinal, esRetiro:bool}
+  const ordenSemanas=[];
+  movsGraf.forEach(a=>{
+    const ks=claveSemanaLunes(a.fecha);
+    acumGraf+=a.monto;
+    if(!semanas[ks])ordenSemanas.push(ks);
+    semanas[ks]={v:acumGraf,esRetiro:(a.monto<0)};
+  });
+  // Construir serie por semana
+  let evoConBase=ordenSemanas.map(ks=>({f:ks,v:semanas[ks].v,esRetiro:semanas[ks].esRetiro}));
+  // Punto base inicial (semana del primer movimiento o semana actual)
+  if(baseInicial>0){
+    const primeraSemana=movsGraf[0]?claveSemanaLunes(movsGraf[0].fecha):claveSemanaLunes(new Date().toISOString().split('T')[0]);
+    evoConBase=[{f:primeraSemana,v:baseInicial,esRetiro:false},...evoConBase];
+  }
   destroyChart('ahorroLine');
   if(evoConBase.length){
     const ptColors=evoConBase.map(e=>e.esRetiro?'#c0392b':'#1a7a5e');
@@ -2546,7 +2641,7 @@ function renderAhorros(){
     charts['ahorroLine']=new Chart(document.getElementById('ahorroLine'),{
       type:'line',
       data:{
-        labels:evoConBase.map(e=>{const d=parseLocalDate(e.f);return d.getDate()+'/'+(d.getMonth()+1);}),
+        labels:evoConBase.map(e=>{const d=parseLocalDate(e.f);return 'Sem '+d.getDate()+'/'+(d.getMonth()+1);}),
         datasets:[{
           label:'Patrimonio',data:evoConBase.map(e=>e.v),
           borderColor:'#1a7a5e',backgroundColor:'rgba(26,122,94,.08)',
@@ -2554,7 +2649,7 @@ function renderAhorros(){
         }]
       },
       options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`$${fmt(c.raw)}`}}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>{const e=evoConBase[ctx[0].dataIndex];const d=parseLocalDate(e.f);return 'Semana del '+d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();},label:c=>`$${fmt(c.raw)}`}}},
         scales:{x:{ticks:{font:{size:10},maxTicksLimit:8}},y:{ticks:{callback:v=>`$${fmt(v)}`},min:0}}}
     });
   }
