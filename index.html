@@ -418,11 +418,10 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     </div>
   </div>
   <p style="font-size:12px;color:var(--text-3);margin:-4px 0 12px">Análisis detallado del mes seleccionado. El resumen general está en el módulo Registro.</p>
-  <!-- TC pendiente del mes -->
-  <div id="tcResumenMes"></div>
+
   <div id="mesChartsGrid" style="display:grid;grid-template-columns:1fr;gap:10px">
     <div class="card" style="margin:0;min-width:0;overflow:hidden">
-      <div class="card-title" style="font-size:12px">Movimientos diarios <span style="font-size:9px;font-weight:400"><span style="color:var(--blue)">■ Ing</span> · <span style="color:var(--red)">■ Egr</span></span></div>
+      <div class="card-title" style="font-size:12px">Movimientos por semana <span style="font-size:9px;font-weight:400"><span style="color:var(--green)">■ Ing</span> · <span style="color:var(--red)">■ Egr</span></span></div>
       <div class="chart-wrap" style="height:160px;position:relative;width:100%"><canvas id="diaChart" role="img" aria-label="Diario" style="max-width:100%">Diario</canvas></div>
     </div>
   </div>
@@ -465,8 +464,6 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
     </div>
     <div class="grp-body collapsed" id="grpAnualAcum"><div class="metrics" id="anualAcumMetrics"></div></div>
   </div>
-  <!-- TC pendiente anual -->
-  <div id="tcResumenAnual"></div>
   <div class="card">
     <div class="card-title">Presupuestado vs real vs acumulado</div>
     <div style="overflow-x:auto">
@@ -1829,20 +1826,21 @@ function renderMes(){
   const selMesIdx=parseInt(mesSel.value);
   const mes=MESES[selMesIdx];
   const d=movimientosDe(selYear,mes);
-  renderTCResumen('tcResumenMes', mes);
   const cats={};d.filter(x=>x.tipo==='Egresos').forEach(x=>{cats[x.categoria]=(cats[x.categoria]||0)+x.monto;});
   const cL=Object.keys(cats).sort((a,b)=>cats[b]-cats[a]);
-  const dias={};d.forEach(x=>{if(!dias[x.fecha])dias[x.fecha]={ing:0,egr:0};if(x.tipo==='Ingresos')dias[x.fecha].ing+=x.monto;else dias[x.fecha].egr+=x.monto;});
+  // Agrupar movimientos por semana (lunes a domingo)
+  function _claveSem(fechaStr){const dd=parseLocalDate(fechaStr);const dow=(dd.getDay()+6)%7;dd.setDate(dd.getDate()-dow);return `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;}
+  const dias={};d.forEach(x=>{const ks=_claveSem(x.fecha);if(!dias[ks])dias[ks]={ing:0,egr:0};if(x.tipo==='Ingresos')dias[ks].ing+=x.monto;else dias[ks].egr+=x.monto;});
   const dk=Object.keys(dias).sort();
   destroyChart('diaChart');
   if(dk.length){const dIT=dk.reduce((s,k)=>s+dias[k].ing,0),dET=dk.reduce((s,k)=>s+dias[k].egr,0);
-  charts['diaChart']=new Chart(document.getElementById('diaChart'),{type:'bar',data:{labels:dk.map(k=>parseLocalDate(k).getDate()),datasets:[
+  charts['diaChart']=new Chart(document.getElementById('diaChart'),{type:'bar',data:{labels:dk.map(k=>{const dd=parseLocalDate(k);return 'Sem '+dd.getDate()+'/'+(dd.getMonth()+1);}),datasets:[
     {label:'Ingresos',data:dk.map(k=>dias[k].ing),backgroundColor:'rgba(26,122,94,.80)',borderWidth:2,borderColor:'#fff',borderRadius:3},
     {label:'Egresos',data:dk.map(k=>dias[k].egr),backgroundColor:'rgba(192,57,43,.80)',borderWidth:2,borderColor:'#fff',borderRadius:3}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{
     legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:10},color:'#e8e6f0',padding:12}},
-    tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}},
-    datalabels:{anchor:'end',align:'top',rotation:-90,font:{size:8,weight:'600'},color:'#fff',textShadowBlur:4,textShadowColor:'rgba(0,0,0,0.9)',display:true,formatter:(v,ctx)=>{const grandTotal=dIT+dET;if(!v||!grandTotal)return'';const p=Math.round(v/grandTotal*100);return p>0?p+'%':''}}
+    tooltip:{callbacks:{title:ctx=>{const dd=parseLocalDate(dk[ctx[0].dataIndex]);return 'Semana del '+dd.getDate()+'/'+(dd.getMonth()+1);},label:c=>`${c.dataset.label}: $${fmt(c.raw)}`}},
+    datalabels:{anchor:'end',align:'top',rotation:-90,font:{size:8,weight:'600'},color:'#fff',textShadowBlur:4,textShadowColor:'rgba(0,0,0,0.9)',display:true,formatter:(v,ctx)=>{if(!v)return'';const tot=ctx.datasetIndex===0?dIT:dET;if(!tot)return'';const p=Math.round(v/tot*100);return p>0?p+'%':''}}
   },scales:{x:{ticks:{font:{size:10}}},y:{grace:'18%',ticks:{callback:v=>`$${fmt(v)}`,font:{size:10}}}}},plugins:window.ChartDataLabels?[ChartDataLabels]:[]});}
   const total=Object.values(cats).reduce((s,v)=>s+v,0);
   document.getElementById('catDetail').innerHTML=cL.length?('<table class="tbl" id="catDetailTable"><thead><tr><th>Categoría</th><th style="text-align:right">Monto</th><th style="text-align:right">%</th></tr></thead><tbody>'+cL.map((cat,i)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${CCOLORS[i%CCOLORS.length]}"></span>${cat}</span></td><td style="text-align:right">$${fmt(cats[cat])}</td><td style="text-align:right;color:var(--text-3)">${total>0?Math.round(cats[cat]/total*100):0}%</td></tr>`).join('')+'</tbody></table>'):'<p style="color:var(--text-3);font-size:13px;padding:8px">Sin egresos registrados este mes.</p>';
@@ -1893,7 +1891,6 @@ function renderAnual(){
         <div style="font-size:15px;font-weight:600;color:${tc1Pend>0?'var(--amber)':'var(--text-3)'}">$${fmt(tc1Pend)}</div>
       </div>
     </div>`;
-  renderTCResumen('tcResumenAnual');
   let acumBal=0,resRows='';
   meses.forEach(mes=>{
     const key=pptoKey(ano,mes);
