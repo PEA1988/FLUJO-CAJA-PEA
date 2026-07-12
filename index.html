@@ -2197,7 +2197,7 @@ function renderPptoComp(mes,ano){
       else if(ppPrefix==='ING|'&&k.startsWith('ING|')){const cat=k.split('|')[1];ppCat[cat]=(ppCat[cat]||0)+v;}
     });
     const activeCats=Object.keys(cats).filter(cat=>ppCat[cat]>0||realCat[cat]>0);
-    if(!activeCats.length)return{html:'',tP:0,tR:0,cats:[]};
+    if(!activeCats.length)return{html:'',tP:0,tR:0,tPend:0,cats:[]};
     const isIng=tipo==='Ingresos';
     let html='',tP=0,tR=0,tPend=0;
     activeCats.forEach((cat,ci)=>{
@@ -2299,15 +2299,35 @@ function renderPptoComp(mes,ano){
     html+=ing.html;
     html+=`<tr class="total-row"><td style="color:var(--green)">Total Ingresos</td><td></td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:var(--green)" title="Pendiente abierto">$${fmt(dfIng)}</td><td></td></tr>`;
   }
-  const balReal=ing.tR-egr.tR;
-  const balPpto=ing.tP-egr.tP;
+  const balReal=(ing.tR||0)-(egr.tR||0);
+  const balPpto=(ing.tP||0)-(egr.tP||0);
+  // Balance PROYECTADO: real actual + lo que aún falta gastar/recibir (partidas abiertas)
+  const proyEgr=(egr.tR||0)+(egr.tPend||0); // egresos reales + pendiente por gastar
+  const proyIng=(ing.tR||0)+(ing.tPend||0); // ingresos reales + pendiente por recibir
+  const balProy=proyIng-proyEgr;
+  const sinDatos=(!egr.cats.length&&!ing.cats.length);
+  if(sinDatos){
+    html+='<tr><td colspan="6" style="text-align:center;padding:14px;color:var(--text-3);font-size:12px">Sin presupuesto ni movimientos para este período. Define un presupuesto arriba para ver la proyección.</td></tr>';
+  }
   html+=`<tr style="background:var(--border-light)"><td colspan="6" style="padding:3px"></td></tr>
     <tr class="total-row" style="font-size:13px">
       <td>Balance neto</td>
       <td></td>
       <td style="text-align:right;color:${balPpto>=0?'var(--green)'  :'var(--red)'}">${balPpto>=0?'+':'-'}$${fmt(Math.abs(balPpto))}</td>
       <td style="text-align:right;color:${balReal>=0?'var(--green)'  :'var(--red)'}">${balReal>=0?'+':'-'}$${fmt(Math.abs(balReal))}</td>
-      <td></td><td></td></tr>`;
+      <td></td><td></td></tr>
+    <tr class="total-row" style="font-size:13px;background:${balProy>=0?'rgba(26,122,94,.10)':'rgba(192,57,43,.10)'};border-top:2px solid ${balProy>=0?'var(--green)':'var(--red)'}">
+      <td style="font-weight:700">Balance proyectado
+        <div style="font-size:9px;font-weight:400;color:var(--text-3)">Si se ejecuta todo lo pendiente abierto</div>
+      </td>
+      <td></td>
+      <td colspan="2" style="text-align:right">
+        <div style="font-size:17px;font-weight:700;color:${balProy>=0?'var(--green)':'var(--red)'}">${balProy>=0?'+':'-'}$${fmt(Math.abs(balProy))}</div>
+        <div style="font-size:9px;color:var(--text-3)">Ing. proy. $${fmt(proyIng)} − Egr. proy. $${fmt(proyEgr)}</div>
+      </td>
+      <td colspan="2" style="text-align:center">
+        <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;background:${balProy>=0?'var(--green)':'var(--red)'};color:#0d1117">${balProy>=0?'✓ POSITIVO':'⚠ NEGATIVO'}</span>
+      </td></tr>`;
 
   document.getElementById('pptoBody').innerHTML=html;
   restorePptoExpanded();
