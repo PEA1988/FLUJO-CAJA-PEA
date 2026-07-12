@@ -305,6 +305,12 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       💳 Pagar Tarjeta de Crédito
     </button>
   </div>
+  <div style="margin-bottom:4px">
+    <button onclick="document.getElementById('cartolaFile').click()" style="width:100%;padding:12px;font-size:13px;font-weight:600;border:1px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-2);cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-2)'">
+      📄 Importar cartola bancaria (Excel)
+    </button>
+    <input type="file" id="cartolaFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="procesarCartola(this)">
+  </div>
 
   <!-- Formulario pago TC — oculto, se muestra al presionar el botón -->
   <div id="formPagoTCCard" class="card" style="display:none">
@@ -3026,6 +3032,216 @@ function aplicarMesVista(mesIdx,ano){
 window.addEventListener('beforeunload',()=>{
   if(_driveTimer){clearTimeout(_driveTimer);_driveTimer=null;try{if(tokenValido())guardarEnGDrive();}catch(e){}}
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// IMPORTAR CARTOLA BANCARIA
+// ═══════════════════════════════════════════════════════════════════
+const CARTOLA_TOLERANCIA_DIAS=7; // ventana de fechas para considerar coincidencia
+let _cartolaPendientes=[]; // movimientos no registrados por clasificar
+
+function procesarCartola(input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,dateNF:'yyyy-mm-dd'});
+      analizarCartola(rows);
+    }catch(err){
+      alert('No se pudo leer el archivo: '+err.message);
+    }
+    input.value=''; // permitir re-subir el mismo archivo
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function _parseMontoCartola(v){
+  if(typeof v==='number')return v;
+  if(!v)return 0;
+  // Quita $ . espacios; respeta el signo negativo
+  const s=String(v).replace(/[$\s.]/g,'').replace(',','.');
+  const n=parseFloat(s);
+  return isNaN(n)?0:n;
+}
+function _parseFechaCartola(v){
+  if(v instanceof Date)return v;
+  if(!v)return null;
+  const s=String(v).trim();
+  // dd/mm/yyyy o dd-mm-yyyy
+  let m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){let y=parseInt(m[3]);if(y<100)y+=2000;return new Date(y,parseInt(m[2])-1,parseInt(m[1]));}
+  // yyyy-mm-dd
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m)return new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
+  const d=new Date(s);
+  return isNaN(d.getTime())?null:d;
+}
+function _fechaStr(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+
+function analizarCartola(rows){
+  if(!rows||rows.length<2){alert('El archivo no tiene datos.');return;}
+  // Detectar columnas por encabezado
+  const head=rows[0].map(h=>String(h||'').toLowerCase().trim());
+  const iFecha=head.findIndex(h=>h.includes('fecha'));
+  const iDesc=head.findIndex(h=>h.includes('descrip')||h.includes('detalle')||h.includes('glosa'));
+  const iMonto=head.findIndex(h=>h.includes('monto')||h.includes('cargo')||h.includes('abono'));
+  if(iFecha<0||iMonto<0){
+    alert('No se encontraron las columnas "Fecha" y "Monto" en el archivo.');
+    return;
+  }
+  // Parsear movimientos del banco
+  const movsBanco=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    if(!r||r[iFecha]==null)continue;
+    const f=_parseFechaCartola(r[iFecha]);
+    const monto=_parseMontoCartola(r[iMonto]);
+    if(!f||!monto)continue;
+    movsBanco.push({
+      fecha:f,
+      fechaStr:_fechaStr(f),
+      desc:String(r[iDesc]||'').trim(),
+      monto:Math.abs(monto),
+      tipo:monto<0?'Egresos':'Ingresos'
+    });
+  }
+  if(!movsBanco.length){alert('No se encontraron movimientos válidos.');return;}
+  // Comparar contra lo ya registrado (monto exacto + fecha dentro de la ventana)
+  const yaRegistrados=[];
+  const noRegistrados=[];
+  const usados=new Set(); // evita que un registro local matchee dos veces
+  movsBanco.forEach(mb=>{
+    const match=datos.find(d=>{
+      if(usados.has(d.id))return false;
+      if(d.tipo!==mb.tipo)return false;
+      if(Math.abs(d.monto-mb.monto)>1)return false; // monto (tolerancia $1 por redondeo)
+      const dd=parseLocalDate(d.fecha);
+      const diffDias=Math.abs((dd-mb.fecha)/(1000*60*60*24));
+      return diffDias<=CARTOLA_TOLERANCIA_DIAS;
+    });
+    if(match){usados.add(match.id);yaRegistrados.push({banco:mb,local:match});}
+    else noRegistrados.push(mb);
+  });
+  _cartolaPendientes=noRegistrados;
+  mostrarResultadoCartola(yaRegistrados,noRegistrados);
+}
+
+function _sugerirCategoria(desc,tipo){
+  // Sugiere categoría/subcat según descripciones previas similares
+  const d=desc.toUpperCase();
+  // Buscar en histórico: comentarios o subcategorías que coincidan con palabras clave
+  const palabras=d.split(/[\s\-_.]+/).filter(w=>w.length>3);
+  let mejor=null,mejorScore=0;
+  datos.filter(x=>x.tipo===tipo).forEach(x=>{
+    const txt=((x.comentario||'')+' '+x.subcategoria+' '+x.categoria).toUpperCase();
+    let score=0;
+    palabras.forEach(w=>{if(txt.includes(w))score++;});
+    if(score>mejorScore){mejorScore=score;mejor=x;}
+  });
+  return mejor&&mejorScore>0?{cat:mejor.categoria,sub:mejor.subcategoria}:null;
+}
+
+function mostrarResultadoCartola(ya,no){
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';overlay.style.display='flex';overlay.id='cartolaOverlay';
+  const filas=no.map((m,i)=>{
+    const sug=_sugerirCategoria(m.desc,m.tipo);
+    const catsDisp=m.tipo==='Egresos'?CATS.Egresos:CATS.Ingresos;
+    const catOpts=Object.keys(catsDisp).map(cat=>`<option value="${cat}" ${sug&&sug.cat===cat?'selected':''}>${cat}</option>`).join('');
+    const catIni=sug?sug.cat:Object.keys(catsDisp)[0];
+    const subOpts=(catsDisp[catIni]||[]).map(s=>`<option value="${s}" ${sug&&sug.sub===s?'selected':''}>${s}</option>`).join('');
+    return `<tr data-i="${i}" style="border-bottom:1px solid var(--border-light)">
+      <td style="padding:8px 4px;font-size:11px">
+        <div style="font-weight:600;color:${m.tipo==='Egresos'?'var(--red)':'var(--green)'}">${m.tipo==='Egresos'?'−':'+'}$${fmt(m.monto)}</div>
+        <div style="color:var(--text-3);font-size:10px">${m.fechaStr}</div>
+        <div style="color:var(--text-2);font-size:10px;margin-top:2px">${m.desc}</div>
+      </td>
+      <td style="padding:8px 4px">
+        <select id="ck_cat_${i}" onchange="_cartolaUpdSub(${i})" style="font-size:11px;padding:5px;width:100%">${catOpts}</select>
+        <select id="ck_sub_${i}" style="font-size:11px;padding:5px;width:100%;margin-top:4px">${subOpts}</select>
+        ${m.tipo==='Egresos'?`<select id="ck_pago_${i}" style="font-size:11px;padding:5px;width:100%;margin-top:4px">
+          <option value="Cuenta Corriente">Cuenta Corriente</option>
+          <option value="TC1">Tarjeta de Crédito 1</option>
+          <option value="TC2">Tarjeta de Crédito 2</option>
+        </select>`:''}
+      </td>
+      <td style="padding:8px 4px;text-align:center">
+        <label style="font-size:10px;color:var(--text-3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <input type="checkbox" id="ck_omit_${i}" style="width:auto"> omitir
+        </label>
+      </td>
+    </tr>`;
+  }).join('');
+  overlay.innerHTML=`<div class="modal" style="max-width:640px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2 style="margin:0">Importar cartola</h2>
+      <button onclick="document.getElementById('cartolaOverlay').remove()" class="eye-btn">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-2);margin:0 0 14px">
+      <span style="color:var(--green)">✓ ${ya.length} ya registrados</span> ·
+      <span style="color:var(--amber)">⚠ ${no.length} sin registrar</span>
+      <br><span style="font-size:11px;color:var(--text-3)">Coincidencia por monto con tolerancia de ±${CARTOLA_TOLERANCIA_DIAS} días.</span>
+    </p>
+    ${no.length?`
+    <div style="overflow-x:auto;margin-bottom:14px">
+      <table class="tbl" style="width:100%">
+        <thead><tr>
+          <th style="font-size:10px">Movimiento del banco</th>
+          <th style="font-size:10px">Clasificar como</th>
+          <th style="font-size:10px;text-align:center">—</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>
+    <button class="btn-primary" onclick="confirmarImportCartola()">Agregar movimientos seleccionados</button>
+    `:'<p style="color:var(--green);font-size:13px">✓ Todos los movimientos del banco ya están registrados.</p>'}
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function _cartolaUpdSub(i){
+  const m=_cartolaPendientes[i];
+  const cat=document.getElementById('ck_cat_'+i).value;
+  const subs=(m.tipo==='Egresos'?CATS.Egresos:CATS.Ingresos)[cat]||[];
+  document.getElementById('ck_sub_'+i).innerHTML=subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+
+function confirmarImportCartola(){
+  let agregados=0;
+  _cartolaPendientes.forEach((m,i)=>{
+    const omit=document.getElementById('ck_omit_'+i);
+    if(omit&&omit.checked)return;
+    const cat=document.getElementById('ck_cat_'+i).value;
+    const sub=document.getElementById('ck_sub_'+i).value;
+    const pagoEl=document.getElementById('ck_pago_'+i);
+    const gastoCon=pagoEl?pagoEl.value:'Cuenta Corriente';
+    const per=fechaToPeriodo(m.fecha);
+    datos.push({
+      id:Date.now()+i,
+      año:per.año,mes:per.mes,
+      tipo:m.tipo,
+      fecha:m.fechaStr,
+      categoria:cat,subcategoria:sub,
+      monto:m.monto,
+      gastoCon:m.tipo==='Egresos'?gastoCon:'Cuenta Corriente',
+      tipoPago:(m.tipo==='Egresos'&&gastoCon!=='Cuenta Corriente')?'Pago Futuro':'Pago Inmediato',
+      comentario:'[Cartola] '+m.desc
+    });
+    agregados++;
+  });
+  if(agregados>0){
+    _invalidarIndice();
+    save();
+    refreshAll();
+    try{renderDashboard();calcSaldoCC();}catch(e){}
+  }
+  const ov=document.getElementById('cartolaOverlay');
+  if(ov)ov.remove();
+  alert(`✓ ${agregados} movimiento(s) importado(s).`);
+}
+
 async function init(){
   // Inicializar período al ciclo actual (corte día 25)
   const _perInit=periodoActual();
