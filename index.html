@@ -2197,9 +2197,9 @@ function renderPptoComp(mes,ano){
       else if(ppPrefix==='ING|'&&k.startsWith('ING|')){const cat=k.split('|')[1];ppCat[cat]=(ppCat[cat]||0)+v;}
     });
     const activeCats=Object.keys(cats).filter(cat=>ppCat[cat]>0||realCat[cat]>0);
-    if(!activeCats.length)return{html:'',tP:0,tR:0,tPend:0,cats:[]};
+    if(!activeCats.length)return{html:'',tP:0,tR:0,tPend:0,tProy:0,cats:[]};
     const isIng=tipo==='Ingresos';
-    let html='',tP=0,tR=0,tPend=0;
+    let html='',tP=0,tR=0,tPend=0,tProy=0;
     activeCats.forEach((cat,ci)=>{
       const p=ppCat[cat]||0,r=realCat[cat]||0;tP+=p;tR+=r;
       const pct=p>0?Math.round(r/p*100):null;
@@ -2217,6 +2217,7 @@ function renderPptoComp(mes,ano){
       let dfCat;
       {
         let pendCat=0;
+        let proyCat=0;
         const _catCerrada=_cerr['CAT|'+cat];
         (cats[cat]||[]).forEach(sub=>{
           const _sk=cat+'|'+sub;
@@ -2225,9 +2226,12 @@ function renderPptoComp(mes,ano){
           const _cerrada=_cerr[_sk]||_catCerrada;
           const _diff=_sp-_sr;
           if(!_cerrada&&_diff>0)pendCat+=_diff;
+          // Proyección: si está cerrada → solo lo real. Si no → el mayor entre ppto y real
+          proyCat += _cerrada ? _sr : Math.max(_sp,_sr);
         });
         dfCat=pendCat;
         tPend+=pendCat;
+        tProy+=proyCat;
       }
       const df=dfCat;
       const dfColor=(df>0)?'var(--green)':'var(--text-3)';
@@ -2280,7 +2284,7 @@ function renderPptoComp(mes,ano){
           <td style="text-align:right">${sst}</td></tr>`;
       });
     });
-    return{html,tP,tR,tPend,cats:activeCats};
+    return{html,tP,tR,tPend,tProy,cats:activeCats};
   }
 
   const egr=renderSeccion('Egresos',CATS.Egresos,'',CCOLORS);
@@ -2301,9 +2305,12 @@ function renderPptoComp(mes,ano){
   }
   const balReal=(ing.tR||0)-(egr.tR||0);
   const balPpto=(ing.tP||0)-(egr.tP||0);
-  // Balance PROYECTADO: real actual + lo que aún falta gastar/recibir (partidas abiertas)
-  const proyEgr=(egr.tR||0)+(egr.tPend||0); // egresos reales + pendiente por gastar
-  const proyIng=(ing.tR||0)+(ing.tPend||0); // ingresos reales + pendiente por recibir
+  // Balance PROYECTADO = lo que se espera al cierre del período.
+  // Por categoría: si ya gastaste MÁS que lo presupuestado, cuenta lo real (el exceso es real).
+  // Si aún no llegas al presupuesto, cuenta el presupuesto (asumes que lo ejecutarás).
+  // Las partidas CERRADAS no proyectan más gasto: cuentan solo lo real.
+  const proyEgr=egr.tProy||0;
+  const proyIng=ing.tProy||0;
   const balProy=proyIng-proyEgr;
   const sinDatos=(!egr.cats.length&&!ing.cats.length);
   if(sinDatos){
@@ -2318,7 +2325,7 @@ function renderPptoComp(mes,ano){
       <td></td><td></td></tr>
     <tr class="total-row" style="font-size:13px;background:${balProy>=0?'rgba(26,122,94,.10)':'rgba(192,57,43,.10)'};border-top:2px solid ${balProy>=0?'var(--green)':'var(--red)'}">
       <td style="font-weight:700">Balance proyectado
-        <div style="font-size:9px;font-weight:400;color:var(--text-3)">Si se ejecuta todo lo pendiente abierto</div>
+        <div style="font-size:9px;font-weight:400;color:var(--text-3)">Cierre esperado del período (ppto o real, el mayor)</div>
       </td>
       <td></td>
       <td colspan="2" style="text-align:right">
