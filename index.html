@@ -3047,7 +3047,7 @@ function procesarCartola(input){
     try{
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
       const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,dateNF:'yyyy-mm-dd'});
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,dateNF:'yyyy-mm-dd'});
       analizarCartola(rows);
     }catch(err){
       alert('No se pudo leer el archivo: '+err.message);
@@ -3059,11 +3059,20 @@ function procesarCartola(input){
 
 function _parseMontoCartola(v){
   if(typeof v==='number')return v;
-  if(!v)return 0;
-  // Quita $ . espacios; respeta el signo negativo
-  const s=String(v).replace(/[$\s.]/g,'').replace(',','.');
-  const n=parseFloat(s);
-  return isNaN(n)?0:n;
+  if(v==null||v==='')return 0;
+  let s=String(v).trim();
+  // Signo negativo: por guion o por parentesis contables
+  let neg=false;
+  if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1);}
+  if(s.indexOf('-')>=0)neg=true;
+  // FORMATO CHILENO: el punto es separador de MILES, la coma es decimal
+  s=s.replace(/[^0-9,]/g,'');
+  const partes=s.split(',');
+  const entero=parseInt(partes[0]||'0',10);
+  const dec=partes[1]?parseInt(partes[1].slice(0,2).padEnd(2,'0'),10)/100:0;
+  const n=(isNaN(entero)?0:entero)+(isNaN(dec)?0:dec);
+  if(!n)return 0;
+  return neg?-n:n;
 }
 function _parseFechaCartola(v){
   if(v instanceof Date)return v;
