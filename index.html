@@ -600,7 +600,10 @@ th[data-col].active-sort .sort-arrow{color:var(--blue)}
       <div class="card-title">Tarjetas de crédito</div>
       <div id="tcDetalle"></div>
       <div style="margin-top:10px;overflow-x:auto">
-        <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Los pagos se registran desde el módulo Registro → botón "Pagar TC"</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+          <div style="font-size:11px;color:var(--text-3)">Historial de pagos · registra nuevos desde <strong>Registro → 💳 Pagar TC</strong></div>
+          <div id="tcPagosResumen" style="font-size:11px;color:var(--text-2)"></div>
+        </div>
         <table class="tbl" id="tcPagosTable"><thead><tr><th onclick="sortTable('fecha',this)" data-col="fecha" style="cursor:pointer;user-select:none;">Fecha <span class="sort-arrow"></span></th><th onclick="sortTable('tarjeta',this)" data-col="tarjeta" style="cursor:pointer;user-select:none;">Tarjeta <span class="sort-arrow"></span></th><th onclick="sortTable('monto',this)" data-col="monto" style="cursor:pointer;user-select:none;text-align:right;">Monto <span class="sort-arrow"></span></th><th></th></tr></thead>
         <tbody id="tcPagosBody"></tbody></table>
       </div>
@@ -1775,8 +1778,11 @@ function renderTC(){
   const sorted=[...pagosTC].sort((a,b)=>b.fecha.localeCompare(a.fecha));
   document.getElementById('tcPagosBody').innerHTML=sorted.map(p=>{
     const d=new Date(p.fecha);
-    return `<tr data-drag-id="${p.id}" draggable="true" style="cursor:grab"><td style="white-space:nowrap;color:var(--text-2);font-size:11px">${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}</td><td><span class="pill p-purple">${TC_LABEL[p.tarjeta]||p.tarjeta}</span></td><td style="text-align:right;font-weight:600;color:var(--green)">$${fmt(p.monto)}</td><td><button class="btn-sm" onclick="delPagoTC(${p.id})">✕</button></td></tr>`;
+    return `<tr data-drag-id="${p.id}" draggable="true" style="cursor:grab"><td style="white-space:nowrap;color:var(--text-2);font-size:11px">${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}</td><td><span class="pill p-purple">${TC_LABEL[p.tarjeta]||p.tarjeta}</span></td><td style="text-align:right;font-weight:600;color:var(--green)">$${fmt(p.monto)}</td><td style="white-space:nowrap"><button class="btn-sm" onclick="editPagoTC(${p.id})" title="Editar">✎</button> <button class="btn-sm" onclick="delPagoTC(${p.id})" title="Eliminar">✕</button></td></tr>`;
   }).join('')||'<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-3)">Sin pagos registrados</td></tr>';
+  const _totalPagos=pagosTC.reduce((s,p)=>s+p.monto,0);
+  const _res=document.getElementById('tcPagosResumen');
+  if(_res)_res.innerHTML=pagosTC.length?`${pagosTC.length} pago(s) · Total: <strong style="color:var(--green)">$${fmt(_totalPagos)}</strong>`:'';
   makeDraggable('tcPagosBody', pagosTC, save, renderTC);
 }
 function registrarPagoTC(){
@@ -1800,7 +1806,38 @@ function registrarPagoTC(){
   cerrarFormPagoTC();
   alert(`✓ Pago de $${fmt(monto)} registrado en ${TC_LABEL[tc]||tc}`);
 }
-function delPagoTC(id){if(!confirm('¿Eliminar este pago?'))return;pagosTC=pagosTC.filter(p=>p.id!==id);save();renderTC();}
+function delPagoTC(id){if(!confirm('¿Eliminar este pago?'))return;pagosTC=pagosTC.filter(p=>p.id!==id);save();renderTC();try{calcSaldoCC();renderDashboard();}catch(e){}}
+function editPagoTC(id){
+  const p=pagosTC.find(x=>x.id===id);
+  if(!p)return;
+  const tr=document.querySelector(`#tcPagosBody tr[data-drag-id="${id}"]`);
+  if(!tr)return;
+  tr.draggable=false;tr.style.cursor='default';
+  tr.innerHTML=`
+    <td><input type="date" id="ep_fecha_${id}" value="${p.fecha}" style="font-size:11px;padding:4px"></td>
+    <td><select id="ep_tc_${id}" style="font-size:11px;padding:4px">
+      <option value="TC1" ${p.tarjeta==='TC1'?'selected':''}>Tarjeta de Crédito 1</option>
+      <option value="TC2" ${p.tarjeta==='TC2'?'selected':''}>Tarjeta de Crédito 2</option>
+    </select></td>
+    <td style="text-align:right"><input type="text" id="ep_monto_${id}" value="${fmt(p.monto)}" data-raw="${p.monto}" class="fmt-input" inputmode="numeric" oninput="fmtInput(this)" style="font-size:11px;padding:4px;text-align:right;width:100px"></td>
+    <td style="white-space:nowrap">
+      <button class="btn-sm" onclick="guardarEdicionPagoTC(${id})" style="border-color:var(--green);color:var(--green)">✓</button>
+      <button class="btn-sm" onclick="renderTC()">✕</button>
+    </td>`;
+}
+function guardarEdicionPagoTC(id){
+  const p=pagosTC.find(x=>x.id===id);
+  if(!p)return;
+  const fv=document.getElementById('ep_fecha_'+id).value;
+  const tc=document.getElementById('ep_tc_'+id).value;
+  const monto=getRaw('ep_monto_'+id);
+  if(!fv){alert('Selecciona una fecha');return;}
+  if(!monto||monto<=0){alert('Ingresa un monto válido');return;}
+  p.fecha=fv;p.tarjeta=tc;p.monto=monto;
+  save();
+  renderTC();
+  try{calcSaldoCC();renderDashboard();}catch(e){}
+}
 
 function renderTCResumen(containerId, mesFilter=null){
   const items=['TC1','TC2'].map(tc=>{const{pendiente}=getTCPendiente(tc,mesFilter);return{tc,pendiente};}).filter(x=>x.pendiente>0);
