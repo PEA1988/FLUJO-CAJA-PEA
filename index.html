@@ -2054,10 +2054,11 @@ function renderPpto(){
   // Build accordion: Egresos + Ingresos
   const egresosGranTotal=Object.entries(CATS.Egresos).reduce((s,[cat,subs])=>s+subs.reduce((s2,sub)=>s2+(pp[cat+'|'+sub]||0),0),0);
   let html='<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">Egresos</div>';
-  html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border-radius:var(--radius-sm);background:var(--red-bg);border:1px solid var(--red)">
+  html+=`<div onclick="togglePptoSection('pptoEgresosCatsWrap')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border-radius:var(--radius-sm);background:var(--red-bg);border:1px solid var(--red);cursor:pointer">
     <span style="font-size:13px;font-weight:700;color:var(--red)">Total Egresos</span>
-    <span id="pptoEgresosTotal" style="font-size:13px;font-weight:700;color:var(--red)">${egresosGranTotal>0?'$'+fmt(egresosGranTotal):'$0'}</span>
+    <span style="font-size:13px;font-weight:700;color:var(--red)"><span id="pptoEgresosTotal">${egresosGranTotal>0?'$'+fmt(egresosGranTotal):'$0'}</span> <span id="pptoEgresosCatsWrap_arrow">▴</span></span>
   </div>`;
+  html+=`<div id="pptoEgresosCatsWrap" style="display:block">`;
   Object.entries(CATS.Egresos).forEach(([cat,subs])=>{
     const catKey=cat.replace(/[\s/]/g,'_');
     const catTotal=subs.reduce((s,sub)=>s+(pp[cat+'|'+sub]||0),0);
@@ -2078,13 +2079,9 @@ function renderPpto(){
     });
     html+=`</div></div></div>`;
   });
+  html+=`</div>`;
   // Ingresos
-  const ingresosGranTotal=Object.entries(CATS.Ingresos).reduce((s,[cat,subs])=>s+subs.reduce((s2,sub)=>s2+(pp['ING|'+cat+'|'+sub]||0),0),0);
   html+='<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">Ingresos esperados</div>';
-  html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border-radius:var(--radius-sm);background:var(--green-bg);border:1px solid var(--green)">
-    <span style="font-size:13px;font-weight:700;color:var(--green)">Total Ingresos</span>
-    <span id="pptoIngresosTotal" style="font-size:13px;font-weight:700;color:var(--green)">${ingresosGranTotal>0?'$'+fmt(ingresosGranTotal):'$0'}</span>
-  </div>`;
   Object.entries(CATS.Ingresos).forEach(([cat,subs])=>{
     const catKey='ING_'+cat.replace(/[\s/]/g,'_');
     const catTotal=subs.reduce((s,sub)=>s+(pp['ING|'+cat+'|'+sub]||0),0);
