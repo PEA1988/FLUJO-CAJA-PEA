@@ -2052,7 +2052,12 @@ function renderPpto(){
   const key=pptoKey(ano,mes);
   const pp=presupuesto[key]||{};
   // Build accordion: Egresos + Ingresos
+  const egresosGranTotal=Object.entries(CATS.Egresos).reduce((s,[cat,subs])=>s+subs.reduce((s2,sub)=>s2+(pp[cat+'|'+sub]||0),0),0);
   let html='<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">Egresos</div>';
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border-radius:var(--radius-sm);background:var(--red-bg);border:1px solid var(--red)">
+    <span style="font-size:13px;font-weight:700;color:var(--red)">Total Egresos</span>
+    <span id="pptoEgresosTotal" style="font-size:13px;font-weight:700;color:var(--red)">${egresosGranTotal>0?'$'+fmt(egresosGranTotal):'$0'}</span>
+  </div>`;
   Object.entries(CATS.Egresos).forEach(([cat,subs])=>{
     const catKey=cat.replace(/[\s/]/g,'_');
     const catTotal=subs.reduce((s,sub)=>s+(pp[cat+'|'+sub]||0),0);
@@ -2074,7 +2079,12 @@ function renderPpto(){
     html+=`</div></div></div>`;
   });
   // Ingresos
+  const ingresosGranTotal=Object.entries(CATS.Ingresos).reduce((s,[cat,subs])=>s+subs.reduce((s2,sub)=>s2+(pp['ING|'+cat+'|'+sub]||0),0),0);
   html+='<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">Ingresos esperados</div>';
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border-radius:var(--radius-sm);background:var(--green-bg);border:1px solid var(--green)">
+    <span style="font-size:13px;font-weight:700;color:var(--green)">Total Ingresos</span>
+    <span id="pptoIngresosTotal" style="font-size:13px;font-weight:700;color:var(--green)">${ingresosGranTotal>0?'$'+fmt(ingresosGranTotal):'$0'}</span>
+  </div>`;
   Object.entries(CATS.Ingresos).forEach(([cat,subs])=>{
     const catKey='ING_'+cat.replace(/[\s/]/g,'_');
     const catTotal=subs.reduce((s,sub)=>s+(pp['ING|'+cat+'|'+sub]||0),0);
@@ -2145,15 +2155,29 @@ function togglePptoSection(id){
   if(arrow)arrow.textContent=open?'▴':'▾';
 }
 function updCatTotal(catKey,cat){
-  const subs=CATS.Egresos[cat]||[];
+  const isIngreso=catKey.startsWith('ING_');
+  const subs=isIngreso?(CATS.Ingresos[cat]||[]):(CATS.Egresos[cat]||[]);
+  const prefix=isIngreso?'ING|':'';
   const total=subs.reduce((s,sub)=>{
-    const subKey=(cat+'|'+sub).replace(/[\s/]/g,'_');
+    const subKey=(prefix+cat+'|'+sub).replace(/[\s/]/g,'_');
     const el=document.getElementById('pps_'+subKey);
     return s+(el?parseFloat((el.dataset.raw||el.value).replace(/[^0-9]/g,''))||0:0);
   },0);
   // Update the header total
   const arrow=document.getElementById('ps_'+catKey+'_arrow');
   if(arrow)arrow.parentElement.querySelector('span:first-child+span').childNodes[0].textContent=total>0?'$'+fmt(total)+' ':' ';
+  // Recompute the section grand total (Egresos or Ingresos)
+  const grandEl=document.getElementById(isIngreso?'pptoIngresosTotal':'pptoEgresosTotal');
+  if(grandEl){
+    const cats=isIngreso?CATS.Ingresos:CATS.Egresos;
+    const grandPrefix=isIngreso?'ING|':'';
+    const grand=Object.entries(cats).reduce((s,[c,ss])=>s+ss.reduce((s2,sub)=>{
+      const sk=(grandPrefix+c+'|'+sub).replace(/[\s/]/g,'_');
+      const el=document.getElementById('pps_'+sk);
+      return s2+(el?parseFloat((el.dataset.raw||el.value).replace(/[^0-9]/g,''))||0:0);
+    },0),0);
+    grandEl.textContent=grand>0?'$'+fmt(grand):'$0';
+  }
 }
 function guardarPpto(){
   const ano=parseInt(document.getElementById('pptoAnoSel').value)||new Date().getFullYear();
