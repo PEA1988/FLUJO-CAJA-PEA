@@ -825,7 +825,6 @@ const TC_LABEL={'TC1':'Tarjeta de Crédito 1','TC2':'Tarjeta de Crédito 2'};
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
 let datos=[], ahorros=[], presupuesto={}, pagosTC=[], saldosIniciales={}, saldoCC=0, partidasCerradas={};
 let _pptoExpanded=new Set(); // category groups currently expanded in ppto table
-let _pptoGrpCollapsed={egr:false,ing:false}; // Egresos/Ingresos totalizador colapsado en tabla ppto vs real
 let histSort={col:'fecha',asc:false}; // default: most recent first
 let activeMes=0, activePptoMes=0, activeHTab='acum';
 let charts={};
@@ -2148,21 +2147,6 @@ function restorePptoExpanded(){
     });
   });
 }
-function applyGrpCollapse(key,collapsed){
-  document.querySelectorAll('.grpHdr_'+key).forEach(r=>{r.style.display=collapsed?'none':'table-row';});
-  if(collapsed){
-    document.querySelectorAll('.grpSub_'+key).forEach(r=>{r.style.display='none';});
-  }else{
-    restorePptoExpanded(); // reinstate solo las subcategorías que el usuario tenía expandidas
-  }
-  const arrow=document.getElementById('grpArrow_'+key);
-  if(arrow)arrow.textContent=collapsed?'▾':'▴';
-}
-function toggleCompGroup(key){
-  const collapsed=!_pptoGrpCollapsed[key];
-  _pptoGrpCollapsed[key]=collapsed;
-  applyGrpCollapse(key,collapsed);
-}
 function togglePptoSection(id){
   const el=document.getElementById(id);
   const arrow=document.getElementById(id+'_arrow');
@@ -2225,7 +2209,7 @@ function renderPptoComp(mes,ano){
   const pp=presupuesto[key]||{};
   const mesDatos=getMesDatos(mes).filter(x=>x.año===ano);
 
-  function renderSeccion(tipo,cats,ppPrefix,colorArr,grpKey){
+  function renderSeccion(tipo,cats,ppPrefix,colorArr){
     const realCat={};const realSub={};
     mesDatos.filter(x=>x.tipo===tipo).forEach(x=>{
       realCat[x.categoria]=(realCat[x.categoria]||0)+x.monto;
@@ -2279,7 +2263,7 @@ function renderPptoComp(mes,ano){
       const catCls='sr_'+tipo+'_'+cat.replace(/[^a-z]/gi,'_');
       const catCerrada=_cerr['CAT|'+cat];
       const btnCatCerrar=`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','CAT|${cat.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${catCerrada?'var(--amber)':'var(--text-3)'};border:1px solid ${catCerrada?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 6px;white-space:nowrap;margin-left:6px">${catCerrada?'✓':'cerrar'}</span>`;
-      html+=`<tr class="grpHdr_${grpKey}" style="background:var(--border-light);cursor:pointer" onclick="toggleSubRows('${catCls}',this)">
+      html+=`<tr style="background:var(--border-light);cursor:pointer" onclick="toggleSubRows('${catCls}',this)">
         <td style="font-weight:600;font-size:12px">
           <span style="display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap">
             <span class="exp-arrow" style="font-size:9px;color:var(--text-3);transition:transform .2s">▸</span>
@@ -2315,7 +2299,7 @@ function renderPptoComp(mes,ano){
         const pendiente=(!isIng&&sp>0&&sdf>0&&!subCerrada)?sdf:0;
         // Botón cerrar en TODAS las subcategorías (ingresos y egresos)
         const btnCerrar=`<span onclick="event.stopPropagation();toggleCerrarPartida('${ano}','${mes}','${sk.replace(/'/g,"")}')" style="font-size:9px;cursor:pointer;color:${_cerr[sk]?'var(--amber)':'var(--text-3)'};border:1px solid ${_cerr[sk]?'var(--amber)':'var(--border)'};border-radius:4px;padding:1px 6px;white-space:nowrap;margin-left:6px">${_cerr[sk]?'✓':'cerrar'}</span>`;
-        html+=`<tr class="${catCls} grpSub_${grpKey}" style="display:none;background:var(--surface)">
+        html+=`<tr class="${catCls}" style="display:none;background:var(--surface)">
           <td style="padding-left:24px;font-size:11px;color:${subCerrada?'var(--text-3)':'#fff'}"><span style="${subCerrada?'opacity:.6':'font-weight:500'}">↳ ${sub}${subCerrada?' 🔒':''}</span></td>
           <td style="text-align:center;vertical-align:middle">${btnCerrar}</td>
           <td style="text-align:right;font-size:11px;color:var(--text-3)">${sp?'$'+fmt(sp):'—'}</td>
@@ -2327,8 +2311,8 @@ function renderPptoComp(mes,ano){
     return{html,tP,tR,tPend,tProy,cats:activeCats};
   }
 
-  const egr=renderSeccion('Egresos',CATS.Egresos,'',CCOLORS,'egr');
-  const ing=renderSeccion('Ingresos',CATS.Ingresos,'ING|',["#1a7a5e","#2a9a6e","#3aad7e","#4abf8e","#5ad2a0"],'ing');
+  const egr=renderSeccion('Egresos',CATS.Egresos,'',CCOLORS);
+  const ing=renderSeccion('Ingresos',CATS.Ingresos,'ING|',["#1a7a5e","#2a9a6e","#3aad7e","#4abf8e","#5ad2a0"]);
   const dfEgr=egr.tPend; // suma de pendientes abiertos
   const dfIng=ing.tPend; // suma de pendientes abiertos (igual que egresos)
   let html='';
@@ -2336,7 +2320,7 @@ function renderPptoComp(mes,ano){
   if(egr.cats.length){
     html+='<tr style="background:var(--red-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Egresos</td></tr>';
     html+=egr.html;
-    html+=`<tr class="total-row" onclick="toggleCompGroup('egr')" style="cursor:pointer"><td style="color:var(--red)">Total Egresos <span id="grpArrow_egr" style="font-size:10px">▴</span></td><td></td><td style="text-align:right">$${fmt(egr.tP)}</td><td style="text-align:right">$${fmt(egr.tR)}</td><td style="text-align:right;color:var(--green)" title="Pendiente abierto">$${fmt(dfEgr)}</td><td></td></tr>`;
+    html+=`<tr class="total-row"><td style="color:var(--red)">Total Egresos</td><td></td><td style="text-align:right">$${fmt(egr.tP)}</td><td style="text-align:right">$${fmt(egr.tR)}</td><td style="text-align:right;color:var(--green)" title="Pendiente abierto">$${fmt(dfEgr)}</td><td></td></tr>`;
   }
   if(ing.cats.length){
     html+='<tr style="background:var(--green-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Ingresos</td></tr>';
@@ -2377,8 +2361,6 @@ function renderPptoComp(mes,ano){
 
   document.getElementById('pptoBody').innerHTML=html;
   restorePptoExpanded();
-  applyGrpCollapse('egr',_pptoGrpCollapsed.egr);
-  applyGrpCollapse('ing',_pptoGrpCollapsed.ing);
 
   destroyChart('pptoChart');
   const allCats=[...egr.cats,...ing.cats];
