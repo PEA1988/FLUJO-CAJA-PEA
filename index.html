@@ -2335,13 +2335,13 @@ function renderPptoComp(mes,ano){
 
   if(egr.cats.length){
     html+='<tr style="background:var(--red-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Egresos</td></tr>';
-    html+=egr.html;
     html+=`<tr class="total-row" onclick="toggleCompGroup('egr')" style="cursor:pointer"><td style="color:var(--red)">Total Egresos <span id="grpArrow_egr" style="font-size:10px">▴</span></td><td></td><td style="text-align:right">$${fmt(egr.tP)}</td><td style="text-align:right">$${fmt(egr.tR)}</td><td style="text-align:right;color:var(--green)" title="Pendiente abierto">$${fmt(dfEgr)}</td><td></td></tr>`;
+    html+=egr.html;
   }
   if(ing.cats.length){
     html+='<tr style="background:var(--green-bg)"><td colspan="6" style="font-size:10px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:.05em;padding:6px 8px">▸ Ingresos</td></tr>';
-    html+=ing.html;
     html+=`<tr class="total-row" onclick="toggleCompGroup('ing')" style="cursor:pointer"><td style="color:var(--green)">Total Ingresos <span id="grpArrow_ing" style="font-size:10px">▴</span></td><td></td><td style="text-align:right">$${fmt(ing.tP)}</td><td style="text-align:right">$${fmt(ing.tR)}</td><td style="text-align:right;color:var(--green)" title="Pendiente abierto">$${fmt(dfIng)}</td><td></td></tr>`;
+    html+=ing.html;
   }
   const balReal=(ing.tR||0)-(egr.tR||0);
   const balPpto=(ing.tP||0)-(egr.tP||0);
