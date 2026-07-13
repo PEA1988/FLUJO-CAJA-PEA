@@ -2060,7 +2060,7 @@ function renderPpto(){
   let html='<div style="font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">Egresos</div>';
   html+=`<div onclick="togglePptoSection('pptoEgresosCatsWrap')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-bottom:8px;border-radius:var(--radius-sm);background:var(--red-bg);border:1px solid var(--red);cursor:pointer">
     <span style="font-size:13px;font-weight:700;color:var(--red)">Total Egresos</span>
-    <span style="font-size:13px;font-weight:700;color:var(--red)"><span id="pptoEgresosTotal">${egresosGranTotal>0?'$'+fmt(egresosGranTotal):'$0'}</span> <span id="pptoEgresosCatsWrap_arrow">▴</span></span>
+    <span style="font-size:13px;font-weight:700;color:var(--red)"><span id="pptoEgresosTotal">${egresosGranTotal>0?'$'+fmt(egresosGranTotal):'$0'}</span> <span id="pptoEgresosCatsWrap_arrow" style="display:inline-block;font-size:9px;transition:transform .2s;transform:rotate(90deg)">▸</span></span>
   </div>`;
   html+=`<div id="pptoEgresosCatsWrap" style="display:block">`;
   Object.entries(CATS.Egresos).forEach(([cat,subs])=>{
@@ -2069,7 +2069,7 @@ function renderPpto(){
     html+=`<div style="border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden">
       <div onclick="togglePptoSection('ps_${catKey}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer;background:var(--bg)">
         <span style="font-size:13px;font-weight:600">${cat}</span>
-        <span style="font-size:12px;color:var(--text-3)">${catTotal>0?'$'+fmt(catTotal):''} <span id="ps_${catKey}_arrow">▾</span></span>
+        <span style="font-size:12px;color:var(--text-3)">${catTotal>0?'$'+fmt(catTotal):''} <span id="ps_${catKey}_arrow" style="display:inline-block;font-size:9px;transition:transform .2s;transform:rotate(0deg)">▸</span></span>
       </div>
       <div id="ps_${catKey}" style="display:none;padding:10px 12px;background:var(--surface);border-top:1px solid var(--border)">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">`;
@@ -2092,7 +2092,7 @@ function renderPpto(){
     html+=`<div style="border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden">
       <div onclick="togglePptoSection('ps_${catKey}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;cursor:pointer;background:var(--green-bg)">
         <span style="font-size:13px;font-weight:600;color:var(--green)">${cat}</span>
-        <span style="font-size:12px;color:var(--green)">${catTotal>0?'$'+fmt(catTotal):''} <span id="ps_${catKey}_arrow">▾</span></span>
+        <span style="font-size:12px;color:var(--green)">${catTotal>0?'$'+fmt(catTotal):''} <span id="ps_${catKey}_arrow" style="display:inline-block;font-size:9px;transition:transform .2s;transform:rotate(0deg)">▸</span></span>
       </div>
       <div id="ps_${catKey}" style="display:none;padding:10px 12px;background:var(--surface);border-top:1px solid var(--border)">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">`;
@@ -2158,14 +2158,14 @@ function toggleSecPpto(key){
     restorePptoExpanded(); // reinstate solo las subcategorías que el usuario tenía expandidas
   }
   const arrow=document.getElementById('secArrow_'+key);
-  if(arrow)arrow.textContent=collapsed?'▾':'▴';
+  if(arrow)arrow.style.transform=collapsed?'rotate(0deg)':'rotate(90deg)';
 }
 function togglePptoSection(id){
   const el=document.getElementById(id);
   const arrow=document.getElementById(id+'_arrow');
   const open=el.style.display==='none';
   el.style.display=open?'block':'none';
-  if(arrow)arrow.textContent=open?'▴':'▾';
+  if(arrow)arrow.style.transform=open?'rotate(90deg)':'rotate(0deg)';
 }
 function updCatTotal(catKey,cat){
   const isIngreso=catKey.startsWith('ING_');
@@ -2331,25 +2331,29 @@ function renderPptoComp(mes,ano){
   let html='';
 
   if(egr.cats.length){
-    const arrEgr=_pptoSecCollapsed.egr?'▾':'▴';
+    const pctEgr=egr.tP>0?Math.round(egr.tR/egr.tP*100):null;
+    const stEgr=pctEgr===null?'<span style="color:var(--text-3);font-size:10px">sin ppto</span>':
+      (pctEgr>100?`<span class="status-over">+${pctEgr-100}%</span>`:pctEgr>85?`<span class="status-warn">${pctEgr}%</span>`:`<span class="status-ok">${pctEgr}%</span>`);
     html+=`<tr onclick="toggleSecPpto('egr')" style="cursor:pointer;background:var(--red-bg)">
-      <td style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em">Egresos <span id="secArrow_egr" style="font-size:10px">${arrEgr}</span></td>
+      <td style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em">Total Egresos <span id="secArrow_egr" style="display:inline-block;font-size:9px;transition:transform .2s;transform:${_pptoSecCollapsed.egr?'rotate(0deg)':'rotate(90deg)'}">▸</span></td>
       <td></td>
       <td style="text-align:right;font-weight:700;color:var(--red)">$${fmt(egr.tP)}</td>
       <td style="text-align:right;font-weight:700;color:var(--red)">$${fmt(egr.tR)}</td>
-      <td style="text-align:right;font-weight:700;color:var(--green)" title="Pendiente abierto">$${fmt(dfEgr)}</td>
-      <td></td></tr>`;
+      <td style="text-align:right;font-weight:700;color:${dfEgr>0?'var(--green)':'var(--text-3)'}" title="Pendiente abierto">$${fmt(dfEgr)}</td>
+      <td style="text-align:right">${stEgr}</td></tr>`;
     html+=egr.html;
   }
   if(ing.cats.length){
-    const arrIng=_pptoSecCollapsed.ing?'▾':'▴';
+    const pctIng=ing.tP>0?Math.round(ing.tR/ing.tP*100):null;
+    const stIng=pctIng===null?'<span style="color:var(--text-3);font-size:10px">sin ppto</span>':
+      (pctIng>=100?`<span class="status-ok">${pctIng}%</span>`:`<span class="status-over">${pctIng}%</span>`);
     html+=`<tr onclick="toggleSecPpto('ing')" style="cursor:pointer;background:var(--green-bg)">
-      <td style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em">Ingresos <span id="secArrow_ing" style="font-size:10px">${arrIng}</span></td>
+      <td style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em">Ingresos <span id="secArrow_ing" style="display:inline-block;font-size:9px;transition:transform .2s;transform:${_pptoSecCollapsed.ing?'rotate(0deg)':'rotate(90deg)'}">▸</span></td>
       <td></td>
       <td style="text-align:right;font-weight:700;color:var(--green)">$${fmt(ing.tP)}</td>
       <td style="text-align:right;font-weight:700;color:var(--green)">$${fmt(ing.tR)}</td>
-      <td style="text-align:right;font-weight:700;color:var(--green)" title="Pendiente abierto">$${fmt(dfIng)}</td>
-      <td></td></tr>`;
+      <td style="text-align:right;font-weight:700;color:${dfIng>0?'var(--green)':'var(--text-3)'}" title="Pendiente abierto">$${fmt(dfIng)}</td>
+      <td style="text-align:right">${stIng}</td></tr>`;
     html+=ing.html;
   }
   const balReal=(ing.tR||0)-(egr.tR||0);
